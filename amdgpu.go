@@ -56,10 +56,11 @@ static inline int query_info_wrapper(int fd,
 				   sizeof(struct drm_amdgpu_info));
 }
 
-static inline int sensor_wrapper(amdgpu_device_handle handle,
-				 uint32_t sensor_type, uint32_t *value) {
-	return amdgpu_sensor_get_value(handle, sensor_type, value);
-}
+// TODO: Implement sensor_wrapper once we verify the correct function name
+// in the installed libdrm_amdgpu version. The function may be:
+// - amdgpu_sensor_get_value()
+// - amdgpu_query_sensor()
+// - Or sensors may need to be read from sysfs instead
 */
 import "C"
 
