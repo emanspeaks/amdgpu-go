@@ -26,20 +26,23 @@ jobs:
           go-version: '1.25'
           cache: true
 
-      - name: Install libdrm dependencies
+      - name: Check libdrm dependencies
         run: |
-          # On NixOS, nix-shell doesn't need sudo
-          nix-shell -p libdrm pkgconfig libdrm_amdgpu --run "true"
-          # Verify pkg-config can find libdrm
-          pkg-config --modversion libdrm || echo "libdrm not found via pkg-config"
+          # Check if libdrm is available via pkg-config
+          if pkg-config --exists libdrm 2>/dev/null; then
+            echo "libdrm already available"
+            pkg-config --modversion libdrm
+          else
+            echo "libdrm not found — check runner has libdrm in its Nix profile"
+            exit 1
+          fi
 
       - name: Set CGO environment
         run: |
-          # On NixOS, we need to set CGO flags to find libraries
+          # Set CGO flags for libdrm
           echo "CGO_ENABLED=1" >> $GITHUB_ENV
           echo "CGO_CFLAGS=$(pkg-config --cflags libdrm libdrm_amdgpu)" >> $GITHUB_ENV
           echo "CGO_LDFLAGS=$(pkg-config --libs libdrm libdrm_amdgpu)" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=$(pkg-config --variable=pc_path pkg-config)" >> $GITHUB_ENV
 
       - name: Build
         run: go build ./...
