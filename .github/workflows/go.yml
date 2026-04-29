@@ -1,0 +1,48 @@
+name: Go CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: moss
+    # Only run on the moss runner (Strix Halo target hardware)
+    if: ${{ github.repository == 'emanspeaks/amdgpu-go' }}
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Install libdrm dependencies
+        run: |
+          sudo nix-shell -p libdrm pkgconfig --run "true"
+          # libdrm and libdrm_amdgpu should be available via NixOS packages
+          # Verify pkg-config can find them
+          pkg-config --modversion libdrm || echo "libdrm not found via pkg-config"
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test (no GPU)
+        run: CGO_ENABLED=0 go test -v ./...
+
+      - name: Test (with GPU)
+        run: CGO_ENABLED=1 go test -v -tags=cgo ./...
+        # This step will skip tests that require GPU hardware
+        # The TestOpenSkip test uses t.Skip() when no GPU is available

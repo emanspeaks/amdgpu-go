@@ -1,1 +1,11 @@
-/TODO.md
+# Build artifacts
+*.exe
+*.test
+*.out
+
+# CGO artifacts
+*_cgo_gotypes.go
+*_cgo_export.go
+*_cgo_defun.go
+*.a
+*.so
