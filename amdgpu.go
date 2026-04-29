@@ -19,7 +19,6 @@ package amdgpu
 #cgo pkg-config: libdrm libdrm_amdgpu
 
 #include <xf86drm.h>
-#include <amdgpu_drm.h>
 #include <amdgpu.h>
 #include <errno.h>
 #include <string.h>
@@ -44,9 +43,9 @@ static inline int read_mm_wrapper(amdgpu_device_handle handle,
 }
 
 static inline int query_info_wrapper(int fd,
-                                     uint32_t query,
-                                     void *return_pointer,
-                                     uint32_t return_size) {
+                                      uint32_t query,
+                                      void *return_pointer,
+                                      uint32_t return_size) {
 	struct drm_amdgpu_info request;
 	memset(&request, 0, sizeof(request));
 	request.query = query;
@@ -55,12 +54,6 @@ static inline int query_info_wrapper(int fd,
 	return drmCommandWriteRead(fd, DRM_AMDGPU_INFO, &request,
 				   sizeof(struct drm_amdgpu_info));
 }
-
-// TODO: Implement sensor_wrapper once we verify the correct function name
-// in the installed libdrm_amdgpu version. The function may be:
-// - amdgpu_sensor_get_value()
-// - amdgpu_query_sensor()
-// - Or sensors may need to be read from sysfs instead
 */
 import "C"
 
