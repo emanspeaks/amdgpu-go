@@ -19,7 +19,10 @@ package amdgpu
 #cgo pkg-config: libdrm libdrm_amdgpu
 
 #include <xf86drm.h>
+#include <amdgpu_drm.h>
 #include <amdgpu.h>
+#include <errno.h>
+#include <string.h>
 #include <stdint.h>
 
 // Thin C wrappers to avoid CGO pointer issues with opaque handles
@@ -40,7 +43,7 @@ static inline int read_mm_wrapper(amdgpu_device_handle handle,
 	return amdgpu_read_mm_registers(handle, offset, count, instance, flags, values);
 }
 
-static inline int query_info_wrapper(amdgpu_device_handle handle,
+static inline int query_info_wrapper(int fd,
                                      uint32_t query,
                                      void *return_pointer,
                                      uint32_t return_size) {
@@ -49,7 +52,7 @@ static inline int query_info_wrapper(amdgpu_device_handle handle,
 	request.query = query;
 	request.return_pointer = (uintptr_t)return_pointer;
 	request.return_size = return_size;
-	return drmCommandWriteRead(handle->fd, DRM_AMDGPU_INFO, &request,
+	return drmCommandWriteRead(fd, DRM_AMDGPU_INFO, &request,
 				   sizeof(struct drm_amdgpu_info));
 }
 

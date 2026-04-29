@@ -30,7 +30,7 @@ type DeviceInfo struct {
 func (d *Device) DeviceInfo() (*DeviceInfo, error) {
 	var info C.struct_drm_amdgpu_info_device
 	ret := C.query_info_wrapper(
-		d.handle,
+		C.int(d.fd),
 		C.AMDGPU_INFO_GET_INFO,
 		unsafe.Pointer(&info),
 		C.uint(unsafe.Sizeof(info)),
@@ -63,7 +63,7 @@ type MemoryInfo struct {
 func (d *Device) MemoryInfo() (*MemoryInfo, error) {
 	var mem C.struct_drm_amdgpu_memory_info
 	ret := C.query_info_wrapper(
-		d.handle,
+		C.int(d.fd),
 		C.AMDGPU_INFO_MEMORY,
 		unsafe.Pointer(&mem),
 		C.uint(unsafe.Sizeof(mem)),
@@ -95,7 +95,7 @@ type VramGttInfo struct {
 func (d *Device) VramGttInfo() (*VramGttInfo, error) {
 	var vg C.struct_drm_amdgpu_info_vram_gtt
 	ret := C.query_info_wrapper(
-		d.handle,
+		C.int(d.fd),
 		C.AMDGPU_INFO_VRAM_GTT,
 		unsafe.Pointer(&vg),
 		C.uint(unsafe.Sizeof(vg)),
