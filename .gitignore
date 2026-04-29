@@ -9,3 +9,5 @@
 *_cgo_defun.go
 *.a
 *.so
+
+node_modules/

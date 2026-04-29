@@ -1,0 +1,28 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"claudeCode.allowDangerouslySkipPermissions": true,
+		"files.exclude": {
+			"**/node_modules": true,
+		},
+    "files.associations": {
+      "VERSION": "plaintext",
+      ".local-gitignore": "gitignore"
+    },
+    "go.toolsEnvVars": {
+      "GOOS": "linux",
+      "GOARCH": "amd64"
+    },
+    "gopls": {
+      "build.buildFlags": ["-tags=linux"]
+    },
+    "go.buildFlags": [
+      "-tags=linux"
+    ],
+    "go.testTags": "linux",
+	}
+}
