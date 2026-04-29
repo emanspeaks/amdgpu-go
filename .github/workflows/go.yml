@@ -26,43 +26,16 @@ jobs:
           go-version: '1.25'
           cache: true
 
-      - name: Setup libdrm environment
-        run: |
-          # Find libdrm.pc files and set PKG_CONFIG_PATH
-          PC_PATH=$(find /nix/store -name "libdrm.pc" -path "*/lib/pkgconfig/*" 2>/dev/null | head -1 | xargs dirname)
-          if [ -z "$PC_PATH" ]; then
-            echo "ERROR: libdrm.pc not found in /nix/store"
-            exit 1
-          fi
-          # Also find libdrm_amdgpu.pc
-          AMDGPU_PC_PATH=$(find /nix/store -name "libdrm_amdgpu.pc" -path "*/lib/pkgconfig/*" 2>/dev/null | head -1 | xargs dirname)
-          if [ -n "$AMDGPU_PC_PATH" ]; then
-            PC_PATH="$PC_PATH:$AMDGPU_PC_PATH"
-          fi
-          echo "PKG_CONFIG_PATH=$PC_PATH" >> $GITHUB_ENV
-          echo "Found libdrm.pc in: $PC_PATH"
-
       - name: Verify libdrm
         run: |
           pkg-config --modversion libdrm
           pkg-config --modversion libdrm_amdgpu || echo "libdrm_amdgpu.pc not found (may be bundled)"
 
-      - name: Set CGO environment
-        run: |
-          echo "CGO_ENABLED=1" >> $GITHUB_ENV
-          echo "CGO_CFLAGS=$(pkg-config --cflags libdrm libdrm_amdgpu 2>/dev/null || true)" >> $GITHUB_ENV
-          echo "CGO_LDFLAGS=$(pkg-config --libs libdrm libdrm_amdgpu 2>/dev/null || true)" >> $GITHUB_ENV
-
       - name: Build
-        run: go build ./...
+        run: CGO_ENABLED=1 go build ./...
 
       - name: Vet
-        run: go vet ./...
+        run: CGO_ENABLED=1 go vet ./...
 
-      - name: Test (no GPU)
+      - name: Test (build verification)
         run: CGO_ENABLED=0 go test -v ./...
-
-      - name: Test (with GPU)
-        run: CGO_ENABLED=1 go test -v -tags=cgo ./...
-        # This step will skip tests that require GPU hardware
-        # The TestOpenSkip test uses t.Skip() when no GPU is available

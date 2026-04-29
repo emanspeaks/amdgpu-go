@@ -1,14 +1,15 @@
+//go:build linux
+
 package amdgpu
 
 /*
-#include <amdgpu.h>
+#include <libdrm/amdgpu.h>
 #include <stdint.h>
 */
 import "C"
 
 import (
 	"fmt"
-	"unsafe"
 )
 
 // ReadMMRegisters reads one or more MMIO registers at the given dword offset.

@@ -8,7 +8,7 @@ Go bindings for the `libdrm_amdgpu` C library. Provides low-level access to AMD 
 - MMIO register reads (GRBM/GRBM2 performance counters)
 - Device info queries (ASIC name, chip class, clocks)
 - Memory info queries (VRAM/GTT heap usage)
-- Sensor reads (SCLK, MCLK, voltages, temperatures)
+- Sensor reads (via sysfs — not yet implemented)
 
 ## Build Requirements
 
@@ -55,12 +55,12 @@ if err != nil {
 }
 fmt.Printf("ASIC: %v, Class: %v\n", info.ASICName, info.ChipClass)
 
-// Read sensor
-sclk, err := dev.SensorValue(amdgpu.SENSOR_TYPE_GFX_SCLK)
+// Read memory info
+mem, err := dev.MemoryInfo()
 if err != nil {
     log.Fatal(err)
 }
-fmt.Printf("SCLK: %d kHz\n", sclk)
+fmt.Printf("VRAM: %d MB / %d MB\n", mem.VRAMHeapUsage/(1024*1024), mem.VRAMTotalHeapSize/(1024*1024))
 ```
 
 ## License

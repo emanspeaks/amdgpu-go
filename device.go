@@ -1,8 +1,10 @@
+//go:build linux
+
 package amdgpu
 
 /*
 #include <xf86drm.h>
-#include <amdgpu.h>
+#include <libdrm/amdgpu.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -11,9 +13,7 @@ import "C"
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
-	"unsafe"
 )
 
 // Device wraps an initialized amdgpu device handle.
@@ -30,7 +30,7 @@ func Open(card int) (*Device, error) {
 
 	fd, err := C.open(C.CString(renderPath), C.O_RDWR, 0)
 	if fd < 0 {
-		return nil, fmt.Errorf("open %s: %w", renderPath, os.ErrNotExist)
+		return nil, fmt.Errorf("open %s: file not found", renderPath)
 	}
 
 	var major, minor C.uint32_t

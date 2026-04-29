@@ -1,3 +1,5 @@
+//go:build linux || windows
+
 package amdgpu
 
 import (
@@ -27,5 +29,3 @@ func TestBuild(t *testing.T) {
 	var _ error = ErrNoDevice
 	var _ error = ErrIO
 }
-
-

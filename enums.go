@@ -1,3 +1,5 @@
+//go:build linux || windows
+
 package amdgpu
 
 // CHIP_CLASS represents the AMD GPU chip class/generation.

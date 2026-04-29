@@ -13,13 +13,16 @@
 // On Debian/Ubuntu: sudo apt install libdrm-dev libdrm-amdgpu1
 // On Fedora: sudo dnf install libdrm-devel libdrm-amdgpu
 // On Arch: sudo pacman -S libdrm
+//go:build linux
+
 package amdgpu
 
 /*
 #cgo pkg-config: libdrm libdrm_amdgpu
 
 #include <xf86drm.h>
-#include <amdgpu.h>
+#include <libdrm/amdgpu_drm.h>
+#include <libdrm/amdgpu.h>
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
@@ -59,7 +62,6 @@ import "C"
 
 import (
 	"fmt"
-	"unsafe"
 )
 
 // mapErr converts a negative C error code to a Go error.

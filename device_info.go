@@ -1,7 +1,9 @@
+//go:build linux
+
 package amdgpu
 
 /*
-#include <amdgpu.h>
+#include <libdrm/amdgpu.h>
 #include <stdint.h>
 #include <string.h>
 */
@@ -14,16 +16,16 @@ import (
 
 // DeviceInfo contains GPU identification and capability data.
 type DeviceInfo struct {
-	ASICName         ASIC_NAME
-	ChipClass        CHIP_CLASS
-	IsApu            bool
-	MaxEngineClock   uint32 // in 10kHz units
-	MaxMemoryClock   uint32 // in 10kHz units
-	L1CacheSize      uint32 // bytes
-	GL1CacheSize     uint32 // bytes
-	L2CacheSize      uint32 // bytes
-	L3CacheSizeMB    uint32 // MiB
-	NUMTCCBlocks     uint32
+	ASICName       ASIC_NAME
+	ChipClass      CHIP_CLASS
+	IsApu          bool
+	MaxEngineClock uint32 // in 10kHz units
+	MaxMemoryClock uint32 // in 10kHz units
+	L1CacheSize    uint32 // bytes
+	GL1CacheSize   uint32 // bytes
+	L2CacheSize    uint32 // bytes
+	L3CacheSizeMB  uint32 // MiB
+	NUMTCCBlocks   uint32
 }
 
 // DeviceInfo returns GPU identification data via AMDGPU_INFO_GET_INFO.
@@ -85,10 +87,10 @@ func (d *Device) MemoryInfo() (*MemoryInfo, error) {
 
 // VramGttInfo contains usable VRAM/GTT heap sizes.
 type VramGttInfo struct {
-	VRAMTotal       uint64
-	VRAMUsable      uint64
-	GTTTotal        uint64
-	GTTUsable       uint64
+	VRAMTotal  uint64
+	VRAMUsable uint64
+	GTTTotal   uint64
+	GTTUsable  uint64
 }
 
 // VramGttInfo returns usable VRAM/GTT sizes via AMDGPU_INFO_VRAM_GTT.
@@ -105,9 +107,9 @@ func (d *Device) VramGttInfo() (*VramGttInfo, error) {
 	}
 
 	return &VramGttInfo{
-		VRAMTotal: uint64(vg.vram_total),
+		VRAMTotal:  uint64(vg.vram_total),
 		VRAMUsable: uint64(vg.vram_usable),
-		GTTTotal: uint64(vg.gtt_total),
-		GTTUsable: uint64(vg.gtt_usable),
+		GTTTotal:   uint64(vg.gtt_total),
+		GTTUsable:  uint64(vg.gtt_usable),
 	}, nil
 }
