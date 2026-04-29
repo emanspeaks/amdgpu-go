@@ -28,10 +28,18 @@ jobs:
 
       - name: Install libdrm dependencies
         run: |
-          sudo nix-shell -p libdrm pkgconfig --run "true"
-          # libdrm and libdrm_amdgpu should be available via NixOS packages
-          # Verify pkg-config can find them
+          # On NixOS, nix-shell doesn't need sudo
+          nix-shell -p libdrm pkgconfig libdrm_amdgpu --run "true"
+          # Verify pkg-config can find libdrm
           pkg-config --modversion libdrm || echo "libdrm not found via pkg-config"
+
+      - name: Set CGO environment
+        run: |
+          # On NixOS, we need to set CGO flags to find libraries
+          echo "CGO_ENABLED=1" >> $GITHUB_ENV
+          echo "CGO_CFLAGS=$(pkg-config --cflags libdrm libdrm_amdgpu)" >> $GITHUB_ENV
+          echo "CGO_LDFLAGS=$(pkg-config --libs libdrm libdrm_amdgpu)" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$(pkg-config --variable=pc_path pkg-config)" >> $GITHUB_ENV
 
       - name: Build
         run: go build ./...
