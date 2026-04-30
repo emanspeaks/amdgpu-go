@@ -7,6 +7,7 @@ package amdgpu
 #cgo cproto CFLAGS: -I${SRCDIR}/cproto
 
 #include <xf86drm.h>
+#include <drm.h>
 #include <libdrm/amdgpu_drm.h>
 #include <libdrm/amdgpu.h>
 #include <fcntl.h>
