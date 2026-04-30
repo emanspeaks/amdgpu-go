@@ -40,7 +40,7 @@ go mod tidy               # update go.sum (Nix workflow)
 ## CI
 
 - `ci.yml`: exemption check → version-bump → build (go vet + go build)
-- `release.yml`: bumps tag from VERSION, publishes linux binaries as GitHub release
+- `release.yml`: creates git tag from VERSION and publishes a GitHub release with generated notes (library — no binaries)
 - `gomod2nix.yml`: runs `go mod tidy` + `gomod2nix generate`, commits go.sum + gomod2nix.toml
 - `.github/workflows/exempt.txt`: patterns that skip version-bump check (readme.md, assets/*)
 
