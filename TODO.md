@@ -40,7 +40,7 @@
 ## Phase 2: Device info + memory
 
 - [x] **2.1** Research C struct layouts — fields mapped from amdgpu.h structs
-- [x] **2.2** Add `DeviceInfo` Go struct + `DeviceInfo()` method — wraps `AMDGPU_INFO_GET_INFO`, extracts: asic_name, chip_class, is_apu, max_engine_clock, max_memory_clock
+- [x] **2.2** Add `DeviceInfo` Go struct + `DeviceInfo()` method — wraps `AMDGPU_INFO_DEV_INFO`, extracts: asic_name, chip_class, is_apu, max_engine_clock, max_memory_clock
 - [x] **2.3** Add `MemoryInfo` Go struct + `MemoryInfo()` method — wraps `AMDGPU_INFO_MEMORY`, extracts: VRAM/GTT heap_usage, total_heap_size, usable_heap_size, resizable_bar
 - [x] **2.4** Add `VramGttInfo` Go struct + `VramGttInfo()` method — wraps `AMDGPU_INFO_VRAM_GTT`
 - [x] **2.5** Add `DRMVersion()` method — wraps `drmGetVersion(fd)`

@@ -23,7 +23,8 @@
 			"GOARCH": "amd64",
 			"CGO_ENABLED": "1",
 			"CC": "${workspaceFolder}/zig-cc.cmd",
-			"ZIG_LIB_DIR": "C:/exe/zig-0.17.0/lib"
+			"ZIG_LIB_DIR": "C:/exe/zig-0.17.0/lib",
+			"CGO_CFLAGS": "-IC:/scratch/mesa/drm -IC:/scratch/mesa/drm/include/drm -IC:/scratch/mesa/drm/amdgpu",
 		},
 		"gopls": {
 			"build.buildFlags": ["-tags=cproto"]

@@ -4,12 +4,10 @@ package amdgpu
 
 /*
 #cgo !cproto pkg-config: libdrm libdrm_amdgpu
-#cgo cproto CFLAGS: -I${SRCDIR}/cproto
 
 #include <xf86drm.h>
-#include <drm.h>
-#include <libdrm/amdgpu_drm.h>
-#include <libdrm/amdgpu.h>
+#include <amdgpu_drm.h>
+#include <amdgpu.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -118,25 +116,30 @@ func (d *Device) FD() int {
 	return d.fd
 }
 
-// DeviceInfo returns GPU identification data via AMDGPU_INFO_GET_INFO.
+// DeviceInfo returns GPU identification data via AMDGPU_INFO_DEV_INFO.
 func (d *Device) DeviceInfo() (*DeviceInfo, error) {
 	var info C.struct_drm_amdgpu_info_device
 	ret := C.query_info_wrapper(
 		C.int(d.fd),
-		C.AMDGPU_INFO_GET_INFO,
+		C.AMDGPU_INFO_DEV_INFO,
 		unsafe.Pointer(&info),
 		C.uint(unsafe.Sizeof(info)),
 	)
 	if ret < 0 {
-		return nil, fmt.Errorf("AMDGPU_INFO_GET_INFO: %w", mapErr(ret))
+		return nil, fmt.Errorf("AMDGPU_INFO_DEV_INFO: %w", mapErr(ret))
 	}
 
 	return &DeviceInfo{
-		ASICName:       ASIC_NAME(info.asic_name),
-		ChipClass:      CHIP_CLASS(info.chip_class),
-		IsApu:          info.is_apu != 0,
-		MaxEngineClock: uint32(info.max_engine_clock),
-		MaxMemoryClock: uint32(info.max_memory_clock),
+		Family:         uint32(info.family),
+		ExternalRev:    uint32(info.external_rev),
+		IsApu:          (uint64(info.ids_flags) & uint64(C.AMDGPU_IDS_FLAGS_FUSION)) != 0,
+		MaxEngineClock: uint64(info.max_engine_clock),
+		MaxMemoryClock: uint64(info.max_memory_clock),
+		NUMTCCBlocks:   uint32(info.num_tcc_blocks),
+		GL0CacheSize:   uint32(info.tcp_cache_size),
+		GL1CacheSize:   uint32(info.gl1c_cache_size),
+		GL2CacheSize:   uint32(info.gl2c_cache_size),
+		MallSize:       uint64(info.mall_size),
 	}, nil
 }
 
@@ -154,17 +157,20 @@ func (d *Device) MemoryInfo() (*MemoryInfo, error) {
 	}
 
 	return &MemoryInfo{
-		VRAMHeapUsage:      uint64(mem.vram.heap_usage),
-		VRAMTotalHeapSize:  uint64(mem.vram.total_heap_size),
-		VRAMUsableHeapSize: uint64(mem.vram.usable_heap_size),
-		GTTHeapUsage:       uint64(mem.gtt.heap_usage),
-		GTTTotalHeapSize:   uint64(mem.gtt.total_heap_size),
-		GTTUsableHeapSize:  uint64(mem.gtt.usable_heap_size),
-		ResizableBar:       mem.vram.usable_heap_size < mem.vram.total_heap_size,
+		VRAMTotalHeapSize:       uint64(mem.vram.total_heap_size),
+		VRAMUsableHeapSize:      uint64(mem.vram.usable_heap_size),
+		VRAMHeapUsage:           uint64(mem.vram.heap_usage),
+		CPUAccessibleTotalSize:  uint64(mem.cpu_accessible_vram.total_heap_size),
+		CPUAccessibleUsableSize: uint64(mem.cpu_accessible_vram.usable_heap_size),
+		CPUAccessibleHeapUsage:  uint64(mem.cpu_accessible_vram.heap_usage),
+		GTTTotalHeapSize:        uint64(mem.gtt.total_heap_size),
+		GTTUsableHeapSize:       uint64(mem.gtt.usable_heap_size),
+		GTTHeapUsage:            uint64(mem.gtt.heap_usage),
+		ResizableBar:            mem.cpu_accessible_vram.total_heap_size >= mem.vram.total_heap_size,
 	}, nil
 }
 
-// VramGttInfo returns usable VRAM/GTT sizes via AMDGPU_INFO_VRAM_GTT.
+// VramGttInfo returns VRAM/GTT size info via AMDGPU_INFO_VRAM_GTT.
 func (d *Device) VramGttInfo() (*VramGttInfo, error) {
 	var vg C.struct_drm_amdgpu_info_vram_gtt
 	ret := C.query_info_wrapper(
@@ -178,10 +184,9 @@ func (d *Device) VramGttInfo() (*VramGttInfo, error) {
 	}
 
 	return &VramGttInfo{
-		VRAMTotal:  uint64(vg.vram_total),
-		VRAMUsable: uint64(vg.vram_usable),
-		GTTTotal:   uint64(vg.gtt_total),
-		GTTUsable:  uint64(vg.gtt_usable),
+		VRAMSize:          uint64(vg.vram_size),
+		VRAMCpuAccessible: uint64(vg.vram_cpu_accessible_size),
+		GTTSize:           uint64(vg.gtt_size),
 	}, nil
 }
 

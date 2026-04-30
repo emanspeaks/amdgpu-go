@@ -12,6 +12,7 @@ cgo
 cproto
 cprotomode
 cross-toolchain
+DCPROTO
 defs
 deinitialize
 Deinitialize
@@ -32,6 +33,7 @@ GRBM
 GRBMOFFSET
 highrez
 HWIP
+ifndef
 impl
 impls
 inpoutx
@@ -61,7 +63,16 @@ STARFIS
 sysfs
 toml
 toolchain
+UAPI
 variadic
 VDDGFX
 VDDNB
+VMEM
 zig
+
+UAPI
+drm
+gitignored
+sysroot
+CompileFlags
+dirs

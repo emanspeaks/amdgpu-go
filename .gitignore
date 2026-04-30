@@ -11,3 +11,8 @@
 *.so
 
 node_modules/
+
+# Machine-local dev toolchain, reference headers, and editor config
+zig-cc.cmd
+ext-include/
+# .clangd

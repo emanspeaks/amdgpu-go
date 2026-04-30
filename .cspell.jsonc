@@ -9,7 +9,8 @@
         ".local-gitignore",
         "cache/**",
         ".env",
-        "tui_log.txt"
+        "tui_log.txt",
+        "ext-include/**"
     ],
     "dictionaryDefinitions": [
         {
