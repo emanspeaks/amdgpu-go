@@ -19,13 +19,32 @@
 - [x] **1.7** Create `amdgpu_test.go` — basic build test (compile-only, no GPU needed); GPU-dependent test deferred to Linux CI
 - [x] **1.8** Verify `go build ./...` — passes without CGO; will pass on Linux with `libdrm-dev` + `libdrm-amdgpu-dev` installed
 
+## Phase 1.5: Cross-platform refactor (file realignment)
+
+- [x] **1.5.1** Create `amdgpu_linux.go`
+- [x] **1.5.2** Create `device_linux.go`
+- [x] **1.5.3** Create `deviceinfo_linux.go`
+- [x] **1.5.4** Create `registers_linux.go`
+- [x] **1.5.5** Create `device_win.go`
+- [x] **1.5.6** Create `deviceinfo_win.go`
+- [x] **1.5.7** Create `registers_win.go`
+- [x] **1.5.8** Update `amdgpu.go`
+- [x] **1.5.9** Update `device.go`
+- [x] **1.5.10** Update `deviceinfo.go`
+- [x] **1.5.11** Update `registers.go`
+- [x] **1.5.12** Update build tags on cross-platform files
+- [x] **1.5.13** Update `amdgpu_test.go` build tag
+- [x] **1.5.14** Delete old `*_windows.go` files
+- [x] **1.5.15** Verify `go vet ./...` passes
+
 ## Phase 2: Device info + memory
 
 - [x] **2.1** Research C struct layouts — fields mapped from amdgpu.h structs
 - [x] **2.2** Add `DeviceInfo` Go struct + `DeviceInfo()` method — wraps `AMDGPU_INFO_GET_INFO`, extracts: asic_name, chip_class, is_apu, max_engine_clock, max_memory_clock
 - [x] **2.3** Add `MemoryInfo` Go struct + `MemoryInfo()` method — wraps `AMDGPU_INFO_MEMORY`, extracts: VRAM/GTT heap_usage, total_heap_size, usable_heap_size, resizable_bar
 - [x] **2.4** Add `VramGttInfo` Go struct + `VramGttInfo()` method — wraps `AMDGPU_INFO_VRAM_GTT`
-- [ ] **2.5** Add `DRMVersion()` method — wraps `drmGetVersion(fd)`
+- [x] **2.5** Add `DRMVersion()` method — wraps `drmGetVersion(fd)`
+- [x] **2.5.1** Add Windows alternative for `DRMVersion()` — WMI or registry query
 - [x] **2.6** Add error mapping — `mapErr()` converts negative C return codes to named Go errors (`ErrPermissionDenied`, `ErrInvalidArg`, `ErrNoDevice`, `ErrIO`)
 - [ ] **2.7** Verify `go build ./...` — will pass on Linux (fails on Windows as expected)
 
@@ -53,6 +72,9 @@
 - [ ] **5.2** Add `ExampleOpen` doc test (with `//go:build ignore`)
 - [ ] **5.3** Add `Makefile` or `justfile` with `build`, `test`, `lint` targets
 - [ ] **5.4** Add `.github/workflows/go.yml` — `go build`, `go vet`, `staticcheck` (no GPU needed)
+- [ ] **5.4.1** Add Windows build verification to CI — `go build ./...` on Windows runner
+- [ ] **5.4.2** Add Windows-specific documentation — InpOut32 setup, driver signing, feature parity table
+- [ ] **5.4.3** Add feature parity checklist between Linux and Windows backends
 - [ ] **5.5** Audit CGO memory management — ensure no leaks on rapid open/close cycles
 - [ ] **5.6** Benchmark GRBM read latency — verify sub-millisecond per-read
 - [ ] **5.7** Remove amdgpu_top dependency from atopweb (or keep as fallback)
@@ -72,12 +94,13 @@
   - `ReadMMRegisters(offset, count uint32)`: `InpOut32.GetPhysLong(BAR5_phys + offset*4)` for each dword
   - `ReadGRBM()`: Read BAR5 + 0x2004 via InpOut32
   - `ReadGRBM2()`: Read BAR5 + 0x2002 via InpOut32
-- [ ] **6.7** Flesh out `device_info_windows.go` — replace stubs with real PCI + SMN + D3DKMT:
+- [ ] **6.7** Flesh out `deviceinfo_windows.go` — replace stubs with real PCI + SMN + D3DKMT:
   - `DeviceInfo()`: PCI vendor/device ID → ASIC mapping + SMN via PCI indirect (probe 0xE0/0xE4, fallback to 0x38/0x3C, then 0x60/0x64)
   - `MemoryInfo()`: Total from PCI BAR0 size + usage from D3DKMTQueryStatistics
   - `VramGttInfo()`: Total from PCI BAR0, usable/usage = 0, GTT = `ErrNotImplemented`
 - [ ] **6.8** Update `readme.md` — cross-platform docs, Windows setup requirements, feature parity table
 - [ ] **6.9** Verify `go build ./...` on Windows — InpOut32-only, no CGO needed for Windows
+- [ ] **6.9.1** Test Windows stubs return correct `ErrWindowsBackend` errors
 
 ---
 
@@ -98,3 +121,6 @@ Each phase gates on `go build ./...` succeeding. No task in a phase can start un
 3. **Pointer passing across CGO boundary** — `ReadMMRegisters` allocates a C array, passes pointer to C, then copies back to Go. Must ensure the C array lives long enough and is freed properly.
 
 4. **Multiple concurrent devices** — If atopweb monitors multiple GPUs, each needs its own `Device`. We should test that concurrent `ReadMMRegisters` calls don't interfere.
+5. **InpOut32 driver requirements** — Windows driver installation, elevation/admin rights, driver signing
+6. **PCI BAR access on Windows** — permission levels, UAC, potential conflicts with other drivers
+7. **D3DKMT availability** — not available on all Windows editions (e.g., Home vs Pro)

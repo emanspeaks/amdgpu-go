@@ -1,8 +1,4 @@
-//go:build windows
-
 package amdgpu
-
-import "fmt"
 
 // DeviceInfo contains GPU identification and capability data.
 type DeviceInfo struct {
@@ -18,11 +14,6 @@ type DeviceInfo struct {
 	NUMTCCBlocks   uint32
 }
 
-// DeviceInfo returns a Windows-specific not-implemented error for now.
-func (d *Device) DeviceInfo() (*DeviceInfo, error) {
-	return nil, fmt.Errorf("DeviceInfo: %w", ErrWindowsBackend)
-}
-
 // MemoryInfo contains VRAM/GTT heap information.
 type MemoryInfo struct {
 	VRAMHeapUsage      uint64
@@ -34,11 +25,6 @@ type MemoryInfo struct {
 	ResizableBar       bool
 }
 
-// MemoryInfo returns a Windows-specific not-implemented error for now.
-func (d *Device) MemoryInfo() (*MemoryInfo, error) {
-	return nil, fmt.Errorf("MemoryInfo: %w", ErrWindowsBackend)
-}
-
 // VramGttInfo contains usable VRAM/GTT heap sizes.
 type VramGttInfo struct {
 	VRAMTotal  uint64
@@ -47,7 +33,10 @@ type VramGttInfo struct {
 	GTTUsable  uint64
 }
 
-// VramGttInfo returns a Windows-specific not-implemented error for now.
-func (d *Device) VramGttInfo() (*VramGttInfo, error) {
-	return nil, fmt.Errorf("VramGttInfo: %w", ErrWindowsBackend)
+// DRMVersion contains DRM driver version information.
+type DRMVersion struct {
+	Name        string // e.g., "amdpgu"
+	Version     string // e.g., "5.18.0"
+	Date        string // e.g., "20220622"
+	Description string // e.g., "Linux AMDGPU"
 }

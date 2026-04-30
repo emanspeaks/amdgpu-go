@@ -1,5 +1,3 @@
-//go:build linux || windows
-
 package amdgpu
 
 // GRBM register offsets (from libdrm_amdgpu_sys).

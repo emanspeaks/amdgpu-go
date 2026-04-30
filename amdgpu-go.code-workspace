@@ -8,21 +8,27 @@
 		"claudeCode.allowDangerouslySkipPermissions": true,
 		"files.exclude": {
 			"**/node_modules": true,
+      "background_chat.md": true
+		},
+		"files.watcherExclude": {
+			"node_modules": true,
 		},
     "files.associations": {
       "VERSION": "plaintext",
-      ".local-gitignore": "gitignore"
+      ".local-gitignore": "gitignore",
+      ".github/workflows/exempt.txt": "gitignore"
     },
-    "go.toolsEnvVars": {
-      "GOOS": "linux",
-      "GOARCH": "amd64"
-    },
-    "gopls": {
-      "build.buildFlags": ["-tags=linux"]
-    },
-    "go.buildFlags": [
-      "-tags=linux"
-    ],
-    "go.testTags": "linux",
+		"go.toolsEnvVars": {
+			"GOOS": "linux",
+			"GOARCH": "amd64",
+			"CGO_ENABLED": "1",
+			"CC": "C:/exe/zig-0.17.0/zig.exe cc -target x86_64-linux-musl",
+			"ZIG_LIB_DIR": "C:/exe/zig-0.17.0/lib"
+		},
+		"gopls": {
+			"build.buildFlags": ["-tags=cproto"]
+		},
+		"go.buildFlags": ["-tags=cproto"],
+		"go.testTags": "cproto",
 	}
 }
