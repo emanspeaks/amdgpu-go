@@ -3,5 +3,8 @@
   "knowledgeBases": [
     "C:\\scratch\\git\\atopweb",
     "C:\\scratch\\git\\amdgpu_top"
+  ],
+  "exclude": [
+    "tui_log.txt"
   ]
 }

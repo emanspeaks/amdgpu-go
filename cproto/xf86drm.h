@@ -15,6 +15,21 @@ extern "C" {
 extern int drmCommandWriteRead(int fd, unsigned long drmCommandIndex,
                                 void *data, unsigned long size);
 
+typedef struct drm_version {
+    int   version_major;
+    int   version_minor;
+    int   version_patchlevel;
+    int   name_len;
+    char *name;
+    int   date_len;
+    char *date;
+    int   desc_len;
+    char *desc;
+} drmVersion, *drmVersionPtr;
+
+extern drmVersionPtr drmGetVersion(int fd);
+extern void          drmFreeVersion(drmVersionPtr v);
+
 #ifdef __cplusplus
 }
 #endif

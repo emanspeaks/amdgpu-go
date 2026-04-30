@@ -10,7 +10,8 @@ jobs:
   build:
     name: Build & Test
     runs-on: moss
-    # Only run on the moss runner (Strix Halo target hardware)
+    # Only run on the moss runner (Strix Halo target hardware).
+    # Fork PRs will skip this job since they cannot access the self-hosted runner.
     if: ${{ github.repository == 'emanspeaks/amdgpu-go' }}
     timeout-minutes: 15
 
@@ -23,7 +24,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version-file: go.mod
           cache: true
 
       - name: Verify libdrm

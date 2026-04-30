@@ -215,37 +215,16 @@ func (d *Device) ReadMMRegisters(offset, count uint32) ([]uint32, error) {
 
 // DRMVersion returns DRM driver version info via drmGetVersion.
 func (d *Device) DRMVersion() (*DRMVersion, error) {
-	var version *C.struct_drm_version
-	ret := C.drmGetVersion(C.int(d.fd), &version)
-	if ret != 0 || version == nil {
+	version := C.drmGetVersion(C.int(d.fd))
+	if version == nil {
 		return nil, fmt.Errorf("drmGetVersion: %w", ErrIO)
 	}
-	defer C.free(unsafe.Pointer(version))
+	defer C.drmFreeVersion(version)
 
 	return &DRMVersion{
 		Name:        C.GoString(version.name),
-		Version:     C.GoString(version.version),
+		Version:     fmt.Sprintf("%d.%d.%d", int(version.version_major), int(version.version_minor), int(version.version_patchlevel)),
 		Date:        C.GoString(version.date),
 		Description: C.GoString(version.desc),
 	}, nil
-}
-
-	values := make([]C.uint32_t, count)
-	ret := C.read_mm_wrapper(
-		(C.amdgpu_device_handle)(d.handle),
-		C.uint(offset),
-		C.uint(count),
-		C.uint32_t(GRBM_INSTANCE),
-		0, // flags
-		&values[0],
-	)
-	if ret < 0 {
-		return nil, fmt.Errorf("amdgpu_read_mm_registers: %w", mapErr(ret))
-	}
-
-	result := make([]uint32, count)
-	for i := range values {
-		result[i] = uint32(values[i])
-	}
-	return result, nil
 }

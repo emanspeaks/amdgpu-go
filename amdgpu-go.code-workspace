@@ -22,7 +22,7 @@
 			"GOOS": "linux",
 			"GOARCH": "amd64",
 			"CGO_ENABLED": "1",
-			"CC": "C:/exe/zig-0.17.0/zig.exe cc -target x86_64-linux-musl",
+			"CC": "${workspaceFolder}/zig-cc.cmd",
 			"ZIG_LIB_DIR": "C:/exe/zig-0.17.0/lib"
 		},
 		"gopls": {

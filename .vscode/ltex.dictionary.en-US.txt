@@ -1,5 +1,7 @@
 amdgpu
 amdgpu-go
+AMDGPUGO
+amdpgu
 apu
 asic
 ASIC
@@ -9,6 +11,7 @@ CFLAGS
 cgo
 cproto
 cprotomode
+cross-toolchain
 defs
 deinitialize
 Deinitialize
@@ -20,6 +23,7 @@ ELLCIN
 ENODEV
 enums
 fnmatch
+glibc
 GOARCH
 gofmt
 gomod
@@ -38,10 +42,13 @@ ldflags
 libc
 libdrm
 linux
+linux-primary
 MCLK
 MMIO
+musl
 No-cgo
 nocgo
+non-variadic
 NUMTCC
 OLDFI
 PISENES
@@ -54,13 +61,7 @@ STARFIS
 sysfs
 toml
 toolchain
+variadic
 VDDGFX
 VDDNB
-
-non-variadic
-variadic
-linux-primary
 zig
-cross-toolchain
-glibc
-musl

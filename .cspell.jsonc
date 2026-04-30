@@ -8,7 +8,8 @@
         ".gitignore",
         ".local-gitignore",
         "cache/**",
-        ".env"
+        ".env",
+        "tui_log.txt"
     ],
     "dictionaryDefinitions": [
         {

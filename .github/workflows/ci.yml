@@ -72,7 +72,7 @@ jobs:
           fi
 
   build:
-    name: Build check
+    name: Build & Vet (cloud)
     needs: check-exempt
     runs-on: ubuntu-latest
     if: needs.check-exempt.outputs.all_exempt != 'true'
@@ -83,10 +83,11 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - run: go vet ./...
+      - name: Install C library headers
+        run: sudo apt-get update && sudo apt-get install -y libdrm-dev
+
+      - name: Vet
+        run: go vet ./...
 
       - name: Build
-        run: go build -v -o atopweb .
-
-      - name: Verify binary exists and runs
-        run: ./atopweb --help || true
+        run: go build ./...
