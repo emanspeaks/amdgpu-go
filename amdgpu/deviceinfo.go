@@ -4,6 +4,7 @@ package amdgpu
 type DeviceInfo struct {
 	Family         uint32 // AMDGPU_FAMILY_* constant (e.g. 143 = FAMILY_NV)
 	ExternalRev    uint32 // external chip revision; identifies specific ASIC variant
+	MarketingName  string // product marketing name from amdgpu_get_marketing_name()
 	IsApu          bool   // true when AMDGPU_IDS_FLAGS_FUSION is set (integrated GPU)
 	MaxEngineClock uint64 // kHz
 	MaxMemoryClock uint64 // kHz

@@ -9,8 +9,9 @@ import (
 
 // FdinfoState tracks per-device fdinfo snapshots needed for delta computation.
 type FdinfoState struct {
-	Prev     map[int]fdinfoProcRaw
-	PrevTime time.Time
+	Prev      map[int]fdinfoProcRaw
+	PrevTime  time.Time
+	HWEngines map[string]bool // engines known to exist on hardware; seeded at init
 }
 
 // PollState holds per-device state that persists across poll cycles.
@@ -44,6 +45,7 @@ func InitPollState(dev *Device, card int) *PollState {
 		state.Gen = GenUnknown
 		state.GRBM2Bits = GRBM2BitsForGen(GenUnknown)
 	}
+	state.Fdinfo.HWEngines = HWEnginesForGen(state.Gen)
 	if dv, err := dev.DRMVersion(); err == nil {
 		state.DRMVer = dv.Version
 	}
@@ -171,6 +173,9 @@ func ReadDeviceSnapshot(dev *Device, card int, state *PollState, gs *GRBMSample,
 		dt = now.Sub(state.Fdinfo.PrevTime).Seconds()
 	}
 	seenEngines := collectSeenEngines(currFdinfo, state.Fdinfo.Prev)
+	for k := range state.Fdinfo.HWEngines {
+		seenEngines[k] = true
+	}
 	fdinfo, totalFdinfo := ComputeFdinfoDeltas(state.Fdinfo.Prev, currFdinfo, dt, seenEngines)
 	state.Fdinfo.Prev = currFdinfo
 	state.Fdinfo.PrevTime = now

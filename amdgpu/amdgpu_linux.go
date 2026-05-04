@@ -78,6 +78,10 @@ static inline int query_hw_ip_wrapper(int fd, uint32_t type, uint32_t ip_instanc
 	return drmCommandWriteRead(fd, DRM_AMDGPU_INFO, &request,
 				   sizeof(struct drm_amdgpu_info));
 }
+
+static inline const char* get_marketing_name_wrapper(amdgpu_device_handle handle) {
+	return amdgpu_get_marketing_name(handle);
+}
 */
 import "C"
 
@@ -157,9 +161,14 @@ func (d *Device) DeviceInfo() (*DeviceInfo, error) {
 	}
 
 	numCUPerSH := uint32(info.num_cu_per_sh)
+	var marketingName string
+	if s := C.get_marketing_name_wrapper((C.amdgpu_device_handle)(d.handle)); s != nil {
+		marketingName = C.GoString(s)
+	}
 	return &DeviceInfo{
 		Family:                   uint32(info.family),
 		ExternalRev:              uint32(info.external_rev),
+		MarketingName:            marketingName,
 		IsApu:                    (uint64(info.ids_flags) & uint64(C.AMDGPU_IDS_FLAGS_FUSION)) != 0,
 		MaxEngineClock:           uint64(info.max_engine_clock),
 		MaxMemoryClock:           uint64(info.max_memory_clock),

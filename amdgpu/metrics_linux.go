@@ -219,32 +219,27 @@ func parseMetricsV1(data []byte, contentRev uint8) map[string]interface{} {
 
 // buildNPUMetrics extracts NPU (IPU) metrics from the gpu_metrics map,
 // returning a map matching the npu_metrics shape in amdgpu_top JSON output.
+// All scalar values are wrapped in {unit, value} objects; npu_busy is an array.
 func buildNPUMetrics(gm map[string]interface{}) map[string]interface{} {
-	npu := map[string]interface{}{
-		"npu_busy":      make([]uint16, 8),
-		"npu_power":     uint16(0),
-		"npu_reads":     uint16(0),
-		"npu_writes":    uint16(0),
-		"npuclk_freq":   uint16(0),
-		"mpnpuclk_freq": uint16(0),
-	}
+	busy := make([]uint16, 8)
 	if arr, ok := gm["average_ipu_activity"].([]uint16); ok && len(arr) == 8 {
-		npu["npu_busy"] = arr
+		copy(busy, arr)
 	}
-	if v, ok := gm["average_ipu_power"].(uint16); ok {
-		npu["npu_power"] = v
+	getU16 := func(key string) uint16 {
+		if v, ok := gm[key].(uint16); ok {
+			return v
+		}
+		return 0
 	}
-	if v, ok := gm["average_ipu_reads"].(uint16); ok {
-		npu["npu_reads"] = v
+	wrap := func(unit string, v interface{}) map[string]interface{} {
+		return map[string]interface{}{"unit": unit, "value": v}
 	}
-	if v, ok := gm["average_ipu_writes"].(uint16); ok {
-		npu["npu_writes"] = v
+	return map[string]interface{}{
+		"npu_busy":      wrap("%", busy),
+		"npu_power":     wrap("mW", getU16("average_ipu_power")),
+		"npu_reads":     wrap("MB/s", getU16("average_ipu_reads")),
+		"npu_writes":    wrap("MB/s", getU16("average_ipu_writes")),
+		"npuclk_freq":   wrap("MHz", getU16("average_ipuclk_frequency")),
+		"mpnpuclk_freq": wrap("MHz", getU16("average_mpipu_frequency")),
 	}
-	if v, ok := gm["average_ipuclk_frequency"].(uint16); ok {
-		npu["npuclk_freq"] = v
-	}
-	if v, ok := gm["average_mpipu_frequency"].(uint16); ok {
-		npu["mpnpuclk_freq"] = v
-	}
-	return npu
 }

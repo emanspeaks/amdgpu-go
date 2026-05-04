@@ -28,29 +28,29 @@ type ChipMeta struct {
 func ChipMetaForFamily(family uint32) ChipMeta {
 	switch family {
 	case 141:
-		return ChipMeta{"GFX900", "Vega10", "gfx900", "GC 9.0.0", ""}
+		return ChipMeta{"GFX9", "Vega10", "gfx900", "GC 9.0.0", ""}
 	case 142:
-		return ChipMeta{"GFX902", "Raven", "gfx902", "GC 9.1.0", ""}
+		return ChipMeta{"GFX9", "Raven", "gfx902", "GC 9.1.0", ""}
 	case 143:
-		return ChipMeta{"GFX1010", "Navi10", "gfx1010", "GC 10.1.0", ""}
+		return ChipMeta{"GFX10", "Navi10", "gfx1010", "GC 10.1.0", ""}
 	case 144:
-		return ChipMeta{"GFX1033", "Van Gogh", "gfx1033", "GC 10.3.3", ""}
+		return ChipMeta{"GFX10_3", "Van Gogh", "gfx1033", "GC 10.3.3", ""}
 	case 145:
-		return ChipMeta{"GFX1100", "Navi31", "gfx1100", "GC 11.0.0", ""}
+		return ChipMeta{"GFX11", "Navi31", "gfx1100", "GC 11.0.0", ""}
 	case 146:
-		return ChipMeta{"GFX1035", "Yellow Carp", "gfx1035", "GC 10.3.5", ""}
+		return ChipMeta{"GFX10_3", "Yellow Carp", "gfx1035", "GC 10.3.5", ""}
 	case 148:
-		return ChipMeta{"GFX1103", "Phoenix", "gfx1103", "GC 11.0.1", "XDNA"}
+		return ChipMeta{"GFX11", "Phoenix", "gfx1103", "GC 11.0.1", "XDNA"}
 	case 149:
-		return ChipMeta{"GFX1036", "Raphael/Mendocino", "gfx1036", "GC 10.3.6", ""}
+		return ChipMeta{"GFX10_3", "Raphael/Mendocino", "gfx1036", "GC 10.3.6", ""}
 	case 150:
-		return ChipMeta{"GFX1151", "Strix Halo", "gfx1151", "GC 11.5.0", "XDNA2"}
+		return ChipMeta{"GFX11_5", "Strix Halo", "gfx1151", "GC 11.5.0", "XDNA2"}
 	case 151:
-		return ChipMeta{"GFX1037", "GC 10.3.7", "gfx1037", "GC 10.3.7", ""}
+		return ChipMeta{"GFX10_3", "GC 10.3.7", "gfx1037", "GC 10.3.7", ""}
 	case 152:
-		return ChipMeta{"GFX1200", "Navi48", "gfx1200", "GC 12.0.0", ""}
+		return ChipMeta{"GFX12", "Navi48", "gfx1200", "GC 12.0.0", ""}
 	case 154:
-		return ChipMeta{"GFX1154", "GC 11.5.4", "gfx1154", "GC 11.5.4", ""}
+		return ChipMeta{"GFX11_5", "GC 11.5.4", "gfx1154", "GC 11.5.4", ""}
 	default:
 		return ChipMeta{
 			fmt.Sprintf("GFX?%d", family),
@@ -60,6 +60,29 @@ func ChipMetaForFamily(family uint32) ChipMeta {
 			"",
 		}
 	}
+}
+
+// HWEnginesForGen returns the set of fdinfo engine keys expected to be present
+// on hardware of the given generation. Used to emit value:0 instead of null
+// for engines that exist on the hardware but produced no fdinfo entries.
+func HWEnginesForGen(gen Generation) map[string]bool {
+	engines := map[string]bool{
+		"GFX":     true,
+		"Compute": true,
+		"DMA":     true,
+	}
+	switch gen {
+	case GenGFX10, GenGFX10_3:
+		engines["Decode"] = true
+		engines["Encode"] = true
+		engines["VCN_JPEG"] = true
+	case GenGFX11, GenGFX12:
+		engines["Media"] = true
+		engines["VCN_JPEG"] = true
+		engines["VCN_Unified"] = true
+		engines["VPE"] = true
+	}
+	return engines
 }
 
 // DetectGeneration maps an AMDGPU family ID to a shader generation.

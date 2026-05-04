@@ -51,5 +51,5 @@ type Frame struct {
 // PeriodInfo describes the sampling period.
 type PeriodInfo struct {
 	Duration     int    `json:"duration"`
-	DurationUnit string `json:"duration_unit"`
+	DurationUnit string `json:"unit"`
 }
