@@ -78,6 +78,19 @@ jobs:
             exit 1
           fi
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install C library headers
+        run: sudo apt-get update && sudo apt-get install -y libdrm-dev
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
       - name: Create release ${{ steps.ver.outputs.tag }}
         uses: softprops/action-gh-release@v2
         with:
