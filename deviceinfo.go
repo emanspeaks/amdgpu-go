@@ -8,6 +8,10 @@ type DeviceInfo struct {
 	MaxEngineClock uint64 // kHz
 	MaxMemoryClock uint64 // kHz
 	NUMTCCBlocks   uint32 // number of texture channel caches (L2 slices)
+	// Shader topology — used to compute total CU count and peak FLOPS.
+	NumShaderEngines         uint32 // number of top-level shader engines
+	NumShaderArraysPerEngine uint32 // shader arrays per shader engine
+	NumCUPerSH               uint32 // compute units per shader array
 	// GFX11+ only; zero on older hardware
 	GL0CacheSize uint32 // L0 VMEM cache per CU (tcp_cache_size), bytes
 	GL1CacheSize uint32 // L1 cache per shader array (gl1c_cache_size), bytes
