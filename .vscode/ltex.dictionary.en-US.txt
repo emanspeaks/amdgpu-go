@@ -30,6 +30,7 @@ EIO
 ELLCIN
 ENODEV
 enums
+ErrWindowsBackend
 fclk
 FCLKM
 fdinfo
@@ -76,6 +77,8 @@ OLDFI
 pgrp
 PISENES
 pkg-config
+pkgs
+Println
 qwen
 rerank
 reranker
