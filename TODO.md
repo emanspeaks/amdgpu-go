@@ -58,10 +58,10 @@
 
 ## Phase 4: atopweb integration
 
-- [ ] **4.1** Create `amd/gpu.go` — package that imports `amdgpu-go`, builds `GPUStats` struct mirroring what atopweb currently parses from amdgpu_top JSON
-- [ ] **4.2** Implement GRBM/GRBM2 reader in `amd/gpu.go` — uses `ReadMMRegisters` + bit-to-metric mapping from `amdgpu_top/crates/libamdgpu_top/src/stat/mod.rs`
+- [ ] **4.1** Create package that imports `amdgpu-go`, builds `GPUStats` struct mirroring what atopweb currently parses from amdgpu_top JSON
+- [ ] **4.2** Implement GRBM/GRBM2 reader — uses `ReadMMRegisters` + bit-to-metric mapping from `amdgpu_top/crates/libamdgpu_top/src/stat/mod.rs`
 - [ ] **4.3** Implement device enumeration — find all `/dev/dri/renderD*`, map to card numbers, open each
-- [ ] **4.4** Wire into atopweb's existing data pipeline — replace amdgpu_top JSON parsing with direct `amd/gpu` calls
+- [ ] **4.4** Wire into atopweb's existing data pipeline — replace amdgpu_top JSON parsing with direct calls to `amdgpu-go`
 - [ ] **4.5** Add `--no-pc` equivalent flag — skip GRBM reads if configured
 - [ ] **4.6** Add graceful degradation — if `amdgpu-go` fails to open a device, fall back to amdgpu_top JSON for that device
 - [ ] **4.7** Integration smoke test on real hardware (CI runner)
