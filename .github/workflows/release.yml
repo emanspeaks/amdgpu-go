@@ -67,7 +67,7 @@ jobs:
       - name: Read version
         id: ver
         run: |
-          ver="v$(cat VERSION | tr -d '[:space:]')"
+          ver="v$(cat amdgpu/VERSION | tr -d '[:space:]')"
           echo "tag=${ver}" >> "$GITHUB_OUTPUT"
           echo "version=${ver}" | tee -a "$GITHUB_STEP_SUMMARY"
 

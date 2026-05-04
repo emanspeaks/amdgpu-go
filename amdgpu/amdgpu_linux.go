@@ -156,17 +156,21 @@ func (d *Device) DeviceInfo() (*DeviceInfo, error) {
 		return nil, fmt.Errorf("AMDGPU_INFO_DEV_INFO: %w", mapErr(ret))
 	}
 
+	numCUPerSH := uint32(info.num_cu_per_sh)
 	return &DeviceInfo{
-		Family:         uint32(info.family),
-		ExternalRev:    uint32(info.external_rev),
-		IsApu:          (uint64(info.ids_flags) & uint64(C.AMDGPU_IDS_FLAGS_FUSION)) != 0,
-		MaxEngineClock: uint64(info.max_engine_clock),
-		MaxMemoryClock: uint64(info.max_memory_clock),
-		NUMTCCBlocks:   uint32(info.num_tcc_blocks),
-		GL0CacheSize:   uint32(info.tcp_cache_size),
-		GL1CacheSize:   uint32(info.gl1c_cache_size),
-		GL2CacheSize:   uint32(info.gl2c_cache_size),
-		MallSize:       uint64(info.mall_size),
+		Family:                   uint32(info.family),
+		ExternalRev:              uint32(info.external_rev),
+		IsApu:                    (uint64(info.ids_flags) & uint64(C.AMDGPU_IDS_FLAGS_FUSION)) != 0,
+		MaxEngineClock:           uint64(info.max_engine_clock),
+		MaxMemoryClock:           uint64(info.max_memory_clock),
+		NUMTCCBlocks:             uint32(info.num_tcc_blocks),
+		NumShaderEngines:         uint32(info.num_shader_engines),
+		NumShaderArraysPerEngine: uint32(info.num_shader_arrays_per_engine),
+		NumCUPerSH:               numCUPerSH,
+		GL0CacheSize:             uint32(info.tcp_cache_size),
+		GL1CacheSize:             uint32(info.gl1c_cache_size),
+		GL2CacheSize:             uint32(info.gl2c_cache_size),
+		MallSize:                 uint64(info.mall_size),
 	}, nil
 }
 
