@@ -334,7 +334,7 @@ func ComputeFdinfoDeltas(
 		}
 	}
 
-	// Total fdinfo aggregate in the same double-nested format.
+	// Total fdinfo aggregate — flat map matching amdgpu_top format (not double-nested).
 	totalInner := make(map[string]interface{}, len(fdinfoStdKeys))
 	for _, e := range fdinfoStdKeys {
 		if e.key != "CPU" && e.key != "VRAM" && e.key != "GTT" && !seenEngines[e.key] {
@@ -344,13 +344,5 @@ func ComputeFdinfoDeltas(
 			totalInner[e.key] = fdinfoEngineVal{e.unit, &v}
 		}
 	}
-	totalUsage := map[string]interface{}{
-		"name":  "Total",
-		"usage": totalInner,
-	}
-	totalEntry := map[string]interface{}{
-		"name":  "Total",
-		"usage": totalUsage,
-	}
-	return out, totalEntry
+	return out, totalInner
 }
