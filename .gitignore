@@ -1,0 +1,20 @@
+# Build artifacts
+*.exe
+*.test
+*.out
+
+# CGO artifacts
+*_cgo_gotypes.go
+*_cgo_export.go
+*_cgo_defun.go
+*.a
+*.so
+
+node_modules/
+
+# Machine-local dev toolchain, reference headers, and editor config
+zig-cc.cmd
+ext-include/
+# .clangd
+
+/indexing_progress.log
