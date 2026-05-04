@@ -58,12 +58,12 @@
 
 ## Phase 4: atopweb integration
 
-- [ ] **4.1** Create package that imports `amdgpu-go`, builds `GPUStats` struct mirroring what atopweb currently parses from amdgpu_top JSON
-- [ ] **4.2** Implement GRBM/GRBM2 reader — uses `ReadMMRegisters` + bit-to-metric mapping from `amdgpu_top/crates/libamdgpu_top/src/stat/mod.rs`
-- [ ] **4.3** Implement device enumeration — find all `/dev/dri/renderD*`, map to card numbers, open each
-- [ ] **4.4** Wire into atopweb's existing data pipeline — replace amdgpu_top JSON parsing with direct calls to `amdgpu-go`
-- [ ] **4.5** Add `--no-pc` equivalent flag — skip GRBM reads if configured
-- [ ] **4.6** Add graceful degradation — if `amdgpu-go` fails to open a device, fall back to amdgpu_top JSON for that device
+- [x] **4.1** Create package that imports `amdgpu-go`, builds `GPUStats` struct mirroring what atopweb currently parses from amdgpu_top JSON (`drmGPUStats` in `amdgpudrm_linux.go`)
+- [x] **4.2** Implement GRBM/GRBM2 reader — samples GRBM_STATUS bit 31 (GUI_ACTIVE) at 32 samples/interval; GFX% = fraction of samples active
+- [x] **4.3** Implement device enumeration — `enumerateGPUDevices()` walks renderD128–D143, opens each with `amdgpu.Open()`
+- [x] **4.4** Wire into atopweb's existing data pipeline — DRM poller is now the default; `--use-top` flag opts into amdgpu_top JSON mode; produces identical atopFrame JSON consumed by existing WS clients and REST endpoints
+- [x] **4.5** Add `--no-pc` equivalent flag — `--no-pc` flag passed to `runDRMPoller`; skips GRBM reads, reports 0% GFX
+- [x] **4.6** Add graceful degradation — devices that fail `amdgpu.Open()` are skipped (logged); whole-device failure triggers 5s retry with re-enumeration; without `--use-drm`, falls back to amdgpu_top as before
 - [ ] **4.7** Integration smoke test on real hardware (CI runner)
 
 ## Phase 5: Hardening + cleanup

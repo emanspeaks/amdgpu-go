@@ -18,6 +18,7 @@ defs
 deinitialize
 Deinitialize
 dirs
+DMCUB
 drm
 dword
 EACCES
