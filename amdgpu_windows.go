@@ -46,3 +46,18 @@ func (d *Device) ReadMMRegisters(offset, count uint32) ([]uint32, error) {
 func (d *Device) DRMVersion() (*DRMVersion, error) {
 	return nil, fmt.Errorf("%w: DRMVersion", ErrWindowsBackend)
 }
+
+// SensorValue returns ErrWindowsBackend on Windows.
+func (d *Device) SensorValue(t SENSOR_TYPE) (uint32, error) {
+	return 0, fmt.Errorf("%w: SensorValue", ErrWindowsBackend)
+}
+
+// FirmwareVersion returns ErrWindowsBackend on Windows.
+func (d *Device) FirmwareVersion(fwType AMDGPU_INFO_FW) (*FirmwareVersion, error) {
+	return nil, fmt.Errorf("%w: FirmwareVersion", ErrWindowsBackend)
+}
+
+// HWIPInfo returns ErrWindowsBackend on Windows.
+func (d *Device) HWIPInfo(ipType HW_IP_TYPE) (*HWIPInfo, error) {
+	return nil, fmt.Errorf("%w: HWIPInfo", ErrWindowsBackend)
+}

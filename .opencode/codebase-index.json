@@ -2,9 +2,17 @@
   "embeddingProvider": "custom",
   "knowledgeBases": [
     "C:\\scratch\\git\\atopweb",
-    "C:\\scratch\\git\\amdgpu_top"
+    "C:\\scratch\\git\\amdgpu_top",
+    "C:\\scratch\\mesa\\drm",
+    "C:\\scratch\\linux"
   ],
   "exclude": [
     "tui_log.txt"
-  ]
+  ],
+  "indexing": {
+    "skipAutoIndexOnLoad": true
+  },
+  "debug": {
+    "progressLogFile": "indexing_progress.log"
+  }
 }

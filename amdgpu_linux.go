@@ -50,6 +50,34 @@ static inline int query_info_wrapper(int fd,
 	return drmCommandWriteRead(fd, DRM_AMDGPU_INFO, &request,
 				   sizeof(struct drm_amdgpu_info));
 }
+
+static inline int query_fw_wrapper(int fd, uint32_t fw_type, uint32_t ip_instance,
+                                    uint32_t index, void *return_pointer,
+                                    uint32_t return_size) {
+	struct drm_amdgpu_info request;
+	memset(&request, 0, sizeof(request));
+	request.query = AMDGPU_INFO_FW_VERSION;
+	request.return_pointer = (uintptr_t)return_pointer;
+	request.return_size = return_size;
+	request.query_fw.fw_type = fw_type;
+	request.query_fw.ip_instance = ip_instance;
+	request.query_fw.index = index;
+	return drmCommandWriteRead(fd, DRM_AMDGPU_INFO, &request,
+				   sizeof(struct drm_amdgpu_info));
+}
+
+static inline int query_hw_ip_wrapper(int fd, uint32_t type, uint32_t ip_instance,
+                                       void *return_pointer, uint32_t return_size) {
+	struct drm_amdgpu_info request;
+	memset(&request, 0, sizeof(request));
+	request.query = AMDGPU_INFO_HW_IP_INFO;
+	request.return_pointer = (uintptr_t)return_pointer;
+	request.return_size = return_size;
+	request.query_hw_ip.type = type;
+	request.query_hw_ip.ip_instance = ip_instance;
+	return drmCommandWriteRead(fd, DRM_AMDGPU_INFO, &request,
+				   sizeof(struct drm_amdgpu_info));
+}
 */
 import "C"
 
@@ -78,15 +106,14 @@ func mapErr(ret C.int) error {
 	}
 }
 
-// Open opens /dev/dri/renderD128 + card and initializes the amdgpu device.
-// card is the card number (0 for card0/renderD128, 1 for card1/renderD130, etc.).
+// Open opens /dev/dri/renderD(128+card) and initializes the amdgpu device.
+// card is the card index (0 for renderD128, 1 for renderD129, etc.).
 func Open(card int) (*Device, error) {
-	renderName := fmt.Sprintf("renderD128%d", card)
-	renderPath := filepath.Join("/dev", "dri", renderName)
+	renderPath := filepath.Join("/dev", "dri", fmt.Sprintf("renderD%d", 128+card))
 
 	fd := C.open_wrapper(C.CString(renderPath), C.O_RDWR)
 	if fd < 0 {
-		return nil, fmt.Errorf("open %s: file not found", renderName)
+		return nil, fmt.Errorf("open %s: file not found", renderPath)
 	}
 
 	var major, minor C.uint32_t
@@ -232,5 +259,56 @@ func (d *Device) DRMVersion() (*DRMVersion, error) {
 		Version:     fmt.Sprintf("%d.%d.%d", int(version.version_major), int(version.version_minor), int(version.version_patchlevel)),
 		Date:        C.GoString(version.date),
 		Description: C.GoString(version.desc),
+	}, nil
+}
+
+// SensorValue returns sensor readings via sysfs (/sys/class/drm/card*/device/hwmon/).
+func (d *Device) SensorValue(t SENSOR_TYPE) (uint32, error) {
+	return 0, fmt.Errorf("SensorValue: sysfs not yet implemented")
+}
+
+// FirmwareVersion returns the firmware version for the given firmware type.
+func (d *Device) FirmwareVersion(fwType AMDGPU_INFO_FW) (*FirmwareVersion, error) {
+	var info C.struct_drm_amdgpu_info_firmware
+	ret := C.query_fw_wrapper(
+		C.int(d.fd),
+		C.uint32_t(fwType),
+		0, 0,
+		unsafe.Pointer(&info),
+		C.uint32_t(unsafe.Sizeof(info)),
+	)
+	if ret < 0 {
+		return nil, fmt.Errorf("AMDGPU_INFO_FW_VERSION: %w", mapErr(ret))
+	}
+
+	return &FirmwareVersion{
+		Version: uint32(info.ver),
+		Feature: uint32(info.feature),
+	}, nil
+}
+
+// HWIPInfo returns hardware IP block info via AMDGPU_INFO_HW_IP_INFO.
+func (d *Device) HWIPInfo(ipType HW_IP_TYPE) (*HWIPInfo, error) {
+	var info C.struct_drm_amdgpu_info_hw_ip
+	ret := C.query_hw_ip_wrapper(
+		C.int(d.fd),
+		C.uint32_t(ipType),
+		0,
+		unsafe.Pointer(&info),
+		C.uint32_t(unsafe.Sizeof(info)),
+	)
+	if ret < 0 {
+		return nil, fmt.Errorf("AMDGPU_INFO_HW_IP: %w", mapErr(ret))
+	}
+
+	ipDisc := uint32(info.ip_discovery_version)
+	return &HWIPInfo{
+		Type:     ipType,
+		Instance: 0,
+		Major:    uint32(info.hw_ip_version_major),
+		Minor:    uint32(info.hw_ip_version_minor),
+		Enabled:  uint32(info.available_rings) != 0,
+		RevMajor: (ipDisc >> 16) & 0xFF,
+		RevMinor: (ipDisc >> 8) & 0xFF,
 	}, nil
 }

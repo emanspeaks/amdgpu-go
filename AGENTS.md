@@ -63,7 +63,7 @@ See `TODO.md` for phase-based plan (Phases 0-6). Key upcoming work:
 
 - Phase 1.5: cross-platform refactor (file realignment) — **done**
 - Phase 2.5: `DRMVersion()` method — **done**
-- Phase 3: sensor reads (sysfs or `amdgpu_sensor_get_value`)
+- Phase 3: sensor reads (`SensorValue`), firmware version (`FirmwareVersion`), HW IP info (`HWIPInfo`) — **done**
 - Phase 4: atopweb integration (`amd/gpu.go` wrapper)
 - Phase 6: real Windows backend (InpOut32 + SetupAPI + D3DKMT)
 

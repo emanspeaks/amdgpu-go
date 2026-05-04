@@ -43,3 +43,21 @@ type DRMVersion struct {
 	Date        string // e.g., "20220622"
 	Description string // e.g., "AMD GPU"
 }
+
+// FirmwareVersion contains firmware version information.
+type FirmwareVersion struct {
+	Name    string // e.g., "VCE", "UVD", "VCN"
+	Version uint32
+	Feature uint32
+}
+
+// HWIPInfo contains hardware IP block information.
+type HWIPInfo struct {
+	Type     HW_IP_TYPE
+	Instance uint32
+	Major    uint32
+	Minor    uint32
+	Enabled  bool
+	RevMajor uint32
+	RevMinor uint32
+}

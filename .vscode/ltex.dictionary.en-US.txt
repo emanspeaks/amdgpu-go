@@ -9,6 +9,7 @@ atopweb
 BARTS
 CFLAGS
 cgo
+CompileFlags
 cproto
 cprotomode
 cross-toolchain
@@ -16,6 +17,8 @@ DCPROTO
 defs
 deinitialize
 Deinitialize
+dirs
+drm
 dword
 EACCES
 EINVAL
@@ -24,6 +27,7 @@ ELLCIN
 ENODEV
 enums
 fnmatch
+gitignored
 glibc
 GOARCH
 gofmt
@@ -33,6 +37,7 @@ GRBM
 GRBMOFFSET
 highrez
 HWIP
+hwmon
 ifndef
 impl
 impls
@@ -55,12 +60,16 @@ NUMTCC
 OLDFI
 PISENES
 pkg-config
+qwen
+rerank
+reranker
 RICHARDVILLE
 SCLK
 semver
 SetupAPI
 STARFIS
 sysfs
+sysroot
 toml
 toolchain
 UAPI
@@ -69,10 +78,3 @@ VDDGFX
 VDDNB
 VMEM
 zig
-
-UAPI
-drm
-gitignored
-sysroot
-CompileFlags
-dirs

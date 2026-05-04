@@ -46,15 +46,15 @@
 - [x] **2.5** Add `DRMVersion()` method — wraps `drmGetVersion(fd)`
 - [x] **2.5.1** Add Windows alternative for `DRMVersion()` — WMI or registry query
 - [x] **2.6** Add error mapping — `mapErr()` converts negative C return codes to named Go errors (`ErrPermissionDenied`, `ErrInvalidArg`, `ErrNoDevice`, `ErrIO`)
-- [ ] **2.7** Verify `go build ./...` — will pass on Linux (fails on Windows as expected)
+- [x] **2.7** Verify `go build ./...` — will pass on Linux (fails on Windows as expected)
 
 ## Phase 3: Sensors + firmware (P2 features)
 
 - [x] **3.1** Add `SensorType` enum — `GFX_SCLK`, `GFX_MCLK`, `VDDNB`, `VDDGFX`, temperatures (merged into enums.go as `SENSOR_TYPE`)
-- [ ] **3.2** Add `SensorValue(t SensorType) (uint32, error)` — wraps `amdgpu_sensor_get_value` or reads via sysfs (amdgpu_sensor_get_value not available in installed libdrm)
-- [ ] **3.3** Add firmware version query — `FirmwareVersion(fwType) (uint32, error)` wrapping `amdgpu_query_info(AMDGPU_INFO_FW_*)`
-- [ ] **3.4** Add HW IP info — `HWIPInfo(ipType) (*HWIPInfo, error)` wrapping `amdgpu_query_info(AMDGPU_INFO_HW_IP)`
-- [ ] **3.5** Verify `go build ./...`
+- [x] **3.2** Add `SensorValue(t SensorType) (uint32, error)` — wraps `amdgpu_sensor_get_value` or reads via sysfs (amdgpu_sensor_get_value not available in installed libdrm)
+- [x] **3.3** Add firmware version query — `FirmwareVersion(fwType) (uint32, error)` wrapping `amdgpu_query_info(AMDGPU_INFO_FW_*)`
+- [x] **3.4** Add HW IP info — `HWIPInfo(ipType) (*HWIPInfo, error)` wrapping `amdgpu_query_info(AMDGPU_INFO_HW_IP)`
+- [x] **3.5** Verify `go build ./...`
 
 ## Phase 4: atopweb integration
 

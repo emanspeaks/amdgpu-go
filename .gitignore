@@ -16,3 +16,5 @@ node_modules/
 zig-cc.cmd
 ext-include/
 # .clangd
+
+/indexing_progress.log
