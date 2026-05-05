@@ -91,3 +91,30 @@ jobs:
 
       - name: Build
         run: go build ./...
+
+      - name: staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
+
+  build-windows:
+    name: Build (Windows — no CGO)
+    needs: check-exempt
+    runs-on: windows-latest
+    if: needs.check-exempt.outputs.all_exempt != 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build (CGO_ENABLED=0)
+        run: go build ./...
+        env:
+          CGO_ENABLED: "0"
+
+      - name: Vet (CGO_ENABLED=0)
+        run: go vet ./...
+        env:
+          CGO_ENABLED: "0"

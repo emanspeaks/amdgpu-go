@@ -6,9 +6,13 @@ type GRBMBit struct {
 	Bit  uint
 }
 
-// GRBMBits returns the GRBM_STATUS bit table used across GFX9+ hardware.
-func GRBMBits() []GRBMBit {
-	return []GRBMBit{
+// GRBMBitsForGen returns the GRBM_STATUS bit table for the given chip generation.
+// Bit positions sourced from drivers/gpu/drm/amd/include/asic_reg/gc/gc_*_sh_mask.h
+//
+// The entry at bit 21 differs by generation: GFX9 uses WD_BUSY (Work Distributor),
+// while GFX10+ replaced VGT+WD+IA with a unified GE block (GE_BUSY).
+func GRBMBitsForGen(gen Generation) []GRBMBit {
+	base := []GRBMBit{
 		{"Graphics Pipe", 31},
 		{"Texture Pipe", 14},
 		{"Shader Export", 20},
@@ -16,12 +20,16 @@ func GRBMBits() []GRBMBit {
 		{"Primitive Assembly", 25},
 		{"Depth Block", 26},
 		{"Color Block", 30},
-		{"Geometry Engine", 21},
 	}
+	if gen == GenGFX9 {
+		return append(base, GRBMBit{"Work Distributor", 21})
+	}
+	return append(base, GRBMBit{"Geometry Engine", 21})
 }
 
 // GRBM2BitsForGen returns the GRBM2_STATUS bit table for the given chip generation.
-// Bit positions sourced from amdgpu_top libamdgpu_top/src/stat/mod.rs.
+// Bit positions sourced from the Linux kernel amdgpu driver register headers:
+// drivers/gpu/drm/amd/include/asic_reg/gc/gc_*_sh_mask.h
 func GRBM2BitsForGen(gen Generation) []GRBMBit {
 	base := []GRBMBit{
 		{"Unified Translation Cache Level-2", 15},

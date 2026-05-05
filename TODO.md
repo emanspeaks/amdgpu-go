@@ -51,7 +51,7 @@
 ## Phase 3: Sensors + firmware (P2 features)
 
 - [x] **3.1** Add `SensorType` enum — `GFX_SCLK`, `GFX_MCLK`, `VDDNB`, `VDDGFX`, temperatures (merged into enums.go as `SENSOR_TYPE`)
-- [x] **3.2** Add `SensorValue(t SensorType) (uint32, error)` — wraps `amdgpu_sensor_get_value` or reads via sysfs (amdgpu_sensor_get_value not available in installed libdrm)
+- [x] **3.2** Add `SensorValue(t SensorType) (uint32, error)` — reads via sysfs/hwmon (amdgpu_sensor_get_value not available in installed libdrm; implemented in Phase 5)
 - [x] **3.3** Add firmware version query — `FirmwareVersion(fwType) (uint32, error)` wrapping `amdgpu_query_info(AMDGPU_INFO_FW_*)`
 - [x] **3.4** Add HW IP info — `HWIPInfo(ipType) (*HWIPInfo, error)` wrapping `amdgpu_query_info(AMDGPU_INFO_HW_IP)`
 - [x] **3.5** Verify `go build ./...`
@@ -64,20 +64,20 @@
 - [x] **4.4** Wire into atopweb's existing data pipeline — DRM poller is now the default; `--use-top` flag opts into amdgpu_top JSON mode; produces identical atopFrame JSON consumed by existing WS clients and REST endpoints
 - [x] **4.5** Add `--no-pc` equivalent flag — `--no-pc` flag passed to `runDRMPoller`; skips GRBM reads, reports 0% GFX
 - [x] **4.6** Add graceful degradation — devices that fail `amdgpu.Open()` are skipped (logged); whole-device failure triggers 5s retry with re-enumeration; without `--use-drm`, falls back to amdgpu_top as before
-- [ ] **4.7** Integration smoke test on real hardware (CI runner)
+- [x] **4.7** Integration smoke test on real hardware (CI runner)
 
 ## Phase 5: Hardening + cleanup
 
-- [ ] **5.1** Add `go doc` comments for all exported types/functions
-- [ ] **5.2** Add `ExampleOpen` doc test (with `//go:build ignore`)
-- [ ] **5.3** Add `Makefile` or `justfile` with `build`, `test`, `lint` targets
-- [ ] **5.4** Add `.github/workflows/go.yml` — `go build`, `go vet`, `staticcheck` (no GPU needed)
-- [ ] **5.4.1** Add Windows build verification to CI — `go build ./...` on Windows runner
-- [ ] **5.4.2** Add Windows-specific documentation — InpOut32 setup, driver signing, feature parity table
-- [ ] **5.4.3** Add feature parity checklist between Linux and Windows backends
-- [ ] **5.5** Audit CGO memory management — ensure no leaks on rapid open/close cycles
-- [ ] **5.6** Benchmark GRBM read latency — verify sub-millisecond per-read
-- [ ] **5.7** Remove amdgpu_top dependency from atopweb (or keep as fallback)
+- [x] **5.1** Add `go doc` comments for all exported types/functions
+- [x] **5.2** Add `ExampleOpen` doc test (with `//go:build ignore`)
+- [x] **5.3** ~~Add `Makefile` or `justfile`~~ — not needed; CI covers all build/lint/test, Nix handles local builds
+- [x] **5.4** Add staticcheck step to CI (in `.github/workflows/ci.yml`)
+- [x] **5.4.1** Add Windows build verification to CI — `go build ./...` on Windows runner
+- [x] **5.4.2** Add Windows-specific documentation — InpOut32 setup, driver signing, feature parity table (readme.md)
+- [x] **5.4.3** Add feature parity checklist between Linux and Windows backends (readme.md)
+- [x] **5.5** Audit CGO memory management — fixed `C.CString` leak in `Open()`
+- [x] **5.6** Benchmark GRBM read latency — `BenchmarkReadGRBM` in `bench_linux_test.go`
+- [x] **5.7** Remove amdgpu_top dependency from atopweb (decision: keep as `--use-top` fallback; DRM poller is now the default)
 
 ## Phase 6: Windows backend (InpOut32 + SetupAPI + D3DKMT)
 
@@ -124,3 +124,42 @@ Each phase gates on `go build ./...` succeeding. No task in a phase can start un
 5. **InpOut32 driver requirements** — Windows driver installation, elevation/admin rights, driver signing
 6. **PCI BAR access on Windows** — permission levels, UAC, potential conflicts with other drivers
 7. **D3DKMT availability** — not available on all Windows editions (e.g., Home vs Pro)
+
+---
+
+## deferred items
+
+Fields present in `amdgpu_top v0.11.4` JSON output that are not yet emitted by amdgpu-go.
+Reference: `amdgpu_top_json/src/dump.rs`.
+
+### Power Cap
+
+Source: hwmon `power1_cap` and `power1_cap_max` files under the card's hwmon directory.
+Emit as `"Power Cap": {"current": <W>, "max": <W>}`, or omit when unavailable (e.g. APUs).
+
+### Power Profiles
+
+Source: `pp_power_profile_mode` under the render device sysfs path.
+Parse the active profile (line marked `*`) and emit `"Power Profiles": ["name", ...]` listing
+all available profile names. The active one can be annotated separately if needed.
+
+### PCIe Link
+
+Source: `current_link_speed` and `current_link_width` under `/sys/bus/pci/devices/<pci_addr>/`.
+Emit as `"PCIe Link": {"speed": "16.0 GT/s", "width": 16}`. Typically null on APUs.
+
+### VRAM Vendor
+
+Source: `mem_info_vram_vendor` sysfs (already read; returns empty on APUs with LPDDR5).
+No code change needed — the field is already conditionally emitted when the sysfs value is non-empty.
+Will populate on discrete GPUs with GDDR6/HBM.
+
+### IP Discovery table
+
+Full hardware IP topology covering all SoC blocks (display, memory controllers, data fabric,
+PCIe, audio, ISP, etc.), sourced from the kernel's IP discovery binary blob.
+The subset relevant to compute (GFX, VCN, DMA, VPE) is already covered by `Hardware IP info`.
+The full table requires parsing the discovery binary — reference the kernel's
+`drivers/gpu/drm/amd/include/discovery.h` for struct layouts and
+`drivers/gpu/drm/amd/amdgpu/amdgpu_discovery.c` for parsing logic.
+Low priority: the frontend does not consume this field.

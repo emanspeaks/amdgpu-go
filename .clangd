@@ -3,4 +3,10 @@ CompileFlags:
     - -IC:/scratch/mesa/drm
     - -IC:/scratch/mesa/drm/include/drm
     - -IC:/scratch/mesa/drm/amdgpu
+    - -IC:/scratch/linux/include
+    - -IC:/scratch/linux/include/uapi
+    - -IC:/scratch/linux/arch/x86/include
+    - -IC:/scratch/linux/arch/x86/include/generated
+    - -IC:/scratch/linux/arch/x86/include/uapi
+    - -IC:/scratch/linux/arch/x86/include/generated/uapi
     - --target=x86_64-linux-gnu

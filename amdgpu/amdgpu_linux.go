@@ -13,6 +13,7 @@ package amdgpu
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 // Thin C wrappers to avoid CGO pointer issues with opaque handles
 // and to provide non-variadic versions of variadic libc functions
@@ -121,7 +122,10 @@ import "C"
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -149,7 +153,9 @@ func mapErr(ret C.int) error {
 func Open(card int) (*Device, error) {
 	renderPath := filepath.Join("/dev", "dri", fmt.Sprintf("renderD%d", 128+card))
 
-	fd := C.open_wrapper(C.CString(renderPath), C.O_RDWR)
+	cPath := C.CString(renderPath)
+	defer C.free(unsafe.Pointer(cPath))
+	fd := C.open_wrapper(cPath, C.O_RDWR)
 	if fd < 0 {
 		return nil, fmt.Errorf("open %s: file not found", renderPath)
 	}
@@ -312,9 +318,110 @@ func (d *Device) DRMVersion() (*DRMVersion, error) {
 	}, nil
 }
 
-// SensorValue returns sensor readings via sysfs (/sys/class/drm/card*/device/hwmon/).
+// cardIndex resolves the card index (0-based) from the open fd by reading the
+// /proc/self/fd/<fd> symlink (e.g. /dev/dri/renderD128 → card 0).
+func (d *Device) cardIndex() int {
+	link, err := os.Readlink(fmt.Sprintf("/proc/self/fd/%d", d.fd))
+	if err != nil || !strings.HasPrefix(filepath.Base(link), "renderD") {
+		return 0
+	}
+	n, err := strconv.Atoi(strings.TrimPrefix(filepath.Base(link), "renderD"))
+	if err != nil {
+		return 0
+	}
+	return n - 128
+}
+
+// SensorValue reads a sensor value from sysfs/hwmon. Return units:
+// SCLK/MCLK → MHz; temperatures → milli-°C; voltages → mV;
+// FAN_SPEED → PWM percentage (0–100); FAN_RPM → RPM.
 func (d *Device) SensorValue(t SENSOR_TYPE) (uint32, error) {
-	return 0, fmt.Errorf("SensorValue: sysfs not yet implemented")
+	card := d.cardIndex()
+	base := renderDevPath(card)
+	hwmon := hwmonDirForCard(card)
+
+	switch t {
+	case SENSOR_TYPE_GFX_SCLK:
+		if clk := readCurrentClockMHz(filepath.Join(base, "pp_dpm_sclk")); clk > 0 {
+			return uint32(clk), nil
+		}
+		if hwmon != "" {
+			if v, ok := findHwmonSensor(hwmon, "freq", "sclk"); ok {
+				return uint32(v / 1e6), nil // Hz → MHz
+			}
+		}
+		return 0, fmt.Errorf("SCLK not available")
+
+	case SENSOR_TYPE_GFX_MCLK:
+		if clk := readCurrentClockMHz(filepath.Join(base, "pp_dpm_mclk")); clk > 0 {
+			return uint32(clk), nil
+		}
+		if hwmon != "" {
+			if v, ok := findHwmonSensor(hwmon, "freq", "mclk"); ok {
+				return uint32(v / 1e6), nil // Hz → MHz
+			}
+		}
+		return 0, fmt.Errorf("MCLK not available")
+
+	case SENSOR_TYPE_THM_TEMPERATURE, SENSOR_TYPE_EDGE_TEMPERATURE:
+		if hwmon != "" {
+			if v, ok := findHwmonSensor(hwmon, "temp", "edge"); ok {
+				return uint32(v), nil // milli-°C
+			}
+		}
+		return 0, fmt.Errorf("edge temperature not available")
+
+	case SENSOR_TYPE_JUNCTION_TEMPERATURE:
+		if hwmon != "" {
+			if v, ok := findHwmonSensor(hwmon, "temp", "junction"); ok {
+				return uint32(v), nil // milli-°C
+			}
+		}
+		return 0, fmt.Errorf("junction temperature not available")
+
+	case SENSOR_TYPE_MEM_TEMPERATURE:
+		if hwmon != "" {
+			if v, ok := findHwmonSensor(hwmon, "temp", "mem"); ok {
+				return uint32(v), nil // milli-°C
+			}
+		}
+		return 0, fmt.Errorf("memory temperature not available")
+
+	case SENSOR_TYPE_VDDGFX:
+		if hwmon != "" {
+			if v, ok := findHwmonSensor(hwmon, "in", "vddgfx"); ok {
+				return uint32(v), nil // mV
+			}
+		}
+		return 0, fmt.Errorf("VDDGFX not available")
+
+	case SENSOR_TYPE_VDDNB:
+		if hwmon != "" {
+			if v, ok := findHwmonSensor(hwmon, "in", "vddnb"); ok {
+				return uint32(v), nil // mV
+			}
+		}
+		return 0, fmt.Errorf("VDDNB not available")
+
+	case SENSOR_TYPE_FAN_SPEED:
+		if hwmon != "" {
+			if v, ok := sysfsUint64(filepath.Join(hwmon, "pwm1")); ok {
+				return uint32(v * 100 / 255), nil // PWM 0–255 → %
+			}
+		}
+		return 0, fmt.Errorf("fan speed not available")
+
+	case SENSOR_TYPE_FAN_RPM:
+		if hwmon != "" {
+			if v, ok := sysfsUint64(filepath.Join(hwmon, "fan1_input")); ok {
+				return uint32(v), nil
+			}
+		}
+		return 0, fmt.Errorf("fan RPM not available")
+
+	default:
+		return 0, fmt.Errorf("unknown sensor type %d", t)
+	}
 }
 
 // FirmwareVersion returns the firmware version for the given firmware type.
