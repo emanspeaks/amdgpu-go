@@ -45,6 +45,14 @@ func buildDeviceInfoMap(card int, di *DeviceInfo, mi *MemoryInfo, state *PollSta
 		"DeviceID":           int(devID),
 		"RevisionID":         int(di.ExternalRev),
 		"PCI":                state.PCIDev,
+		"DevicePath": map[string]interface{}{
+			"DeviceID":   int(devID),
+			"DeviceName": deviceName,
+			"RevisionID": int(di.ExternalRev),
+			"card":       fmt.Sprintf("/dev/dri/card%d", card),
+			"pci":        state.PCIDev,
+			"render":     fmt.Sprintf("/dev/dri/renderD%d", 128+card),
+		},
 		"GPU Family":         meta.GPUFamily,
 		"GPU Type":           gpuType,
 		"gfx_target_version": meta.GFXTarget,
@@ -202,6 +210,9 @@ func buildDeviceInfoMap(card int, di *DeviceInfo, mi *MemoryInfo, state *PollSta
 	}
 	if state.VideoCaps != nil {
 		m["Video Caps"] = state.VideoCaps
+	}
+	if features := ReadPPFeatureMask(); features != nil {
+		m["pp_feature_mask"] = features
 	}
 
 	return m

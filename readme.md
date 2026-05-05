@@ -17,15 +17,43 @@ Go bindings for the `libdrm_amdgpu` C library. Provides direct access to AMD GPU
 
 ## Platform support
 
+### Feature parity checklist
+
 | Feature | Linux | Windows |
 | --- | --- | --- |
-| Device open/close | ✓ | stub (ErrWindowsBackend) |
-| Device/memory info | ✓ | stub |
-| MMIO register reads | ✓ | stub |
-| GRBM bit tables | ✓ | ✓ |
-| Chip metadata | ✓ | ✓ |
-| Frame builder | ✓ | ✓ |
-| Sensor reads | planned | stub |
+| `Open` / `Close` | ✓ (libdrm CGO) | planned (Phase 6: InpOut32 + SetupAPI) |
+| `DeviceInfo` | ✓ | planned (PCI + SMN) |
+| `MemoryInfo` | ✓ | planned (D3DKMTQueryStatistics) |
+| `VramGttInfo` | ✓ | planned |
+| `ReadMMRegisters` | ✓ | planned (BAR5 via InpOut32) |
+| `ReadGRBM` / `ReadGRBM2` | ✓ | planned |
+| `DRMVersion` | ✓ | ✓ (WMI / registry) |
+| `FirmwareVersion` | ✓ | not planned |
+| `HWIPInfo` | ✓ | not planned |
+| Sensor reads (temp, power, clocks, voltages) | ✓ (sysfs/hwmon) | not planned |
+| `Device.SensorValue(SENSOR_TYPE)` | ✓ | not planned |
+| GRBM bit tables | ✓ | ✓ (pure Go) |
+| Chip metadata | ✓ | ✓ (pure Go) |
+| Frame builder | ✓ | ✓ (pure Go) |
+
+All Windows device methods currently return `ErrWindowsBackend`. The pure-Go
+subsystems (GRBM tables, chip metadata, frame builder) compile and run on Windows
+without CGO or any driver.
+
+### Windows setup (Phase 6, not yet implemented)
+
+When the InpOut32 backend is added, the following will be required:
+
+1. **Driver signing** — InpOut32 ships a signed kernel driver (`inpoutx64.sys`).
+   Windows 10/11 with Secure Boot requires the driver to be signed. The
+   pre-built binary from highrez.co.uk is already signed.
+2. **Administrator rights** — installing the InpOut32 driver service requires
+   elevation. Once installed, subsequent calls do not require elevation.
+3. **Download** — `inpoutx64.dll` and `inpoutx64.sys` from
+   [highrez.co.uk](https://www.highrez.co.uk/downloads/inpout32/) must be
+   placed alongside the executable or on `PATH`.
+4. **D3DKMT** — `MemoryInfo` will query `D3DKMTQueryStatistics` (available on
+   Windows 10 1607+ Professional/Enterprise; not available on Home editions).
 
 ## Build requirements
 
@@ -115,7 +143,7 @@ if err != nil {
 }
 
 gen := amdgpu.DetectGeneration(info.Family)
-for _, bit := range amdgpu.GRBMBits() {
+for _, bit := range amdgpu.GRBMBitsForGen(gen) {
     if vals[0]&(1<<bit.Bit) != 0 {
         fmt.Printf("  active: %s\n", bit.Name)
     }

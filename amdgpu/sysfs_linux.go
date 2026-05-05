@@ -193,6 +193,55 @@ func readCurrentClockMHz(path string) float64 {
 	return 0
 }
 
+var ppFeatureMaskBits = []struct {
+	bit  uint32
+	name string
+}{
+	{0x1, "PP_SCLK_DPM_MASK"},
+	{0x2, "PP_MCLK_DPM_MASK"},
+	{0x4, "PP_PCIE_DPM_MASK"},
+	{0x8, "PP_SCLK_DEEP_SLEEP_MASK"},
+	{0x10, "PP_POWER_CONTAINMENT_MASK"},
+	{0x20, "PP_UVD_HANDSHAKE_MASK"},
+	{0x40, "PP_SMC_VOLTAGE_CONTROL_MASK"},
+	{0x80, "PP_VBI_TIME_SUPPORT_MASK"},
+	{0x100, "PP_ULV_MASK"},
+	{0x200, "PP_ENABLE_GFX_CG_THRU_SMU"},
+	{0x400, "PP_CLOCK_STRETCH_MASK"},
+	{0x800, "PP_OD_FUZZY_FAN_CONTROL_MASK"},
+	{0x1000, "PP_SOCCLK_DPM_MASK"},
+	{0x2000, "PP_DCEFCLK_DPM_MASK"},
+	{0x4000, "PP_OVERDRIVE_MASK"},
+	{0x8000, "PP_GFXOFF_MASK"},
+	{0x10000, "PP_ACG_MASK"},
+	{0x20000, "PP_STUTTER_MODE"},
+	{0x40000, "PP_AVFS_MASK"},
+	{0x80000, "PP_GFX_DCS_MASK"},
+}
+
+// ReadPPFeatureMask reads /sys/module/amdgpu/parameters/ppfeaturemask and returns
+// the list of enabled feature names. Returns nil if the file is absent or empty.
+func ReadPPFeatureMask() []string {
+	s := sysfsRead("/sys/module/amdgpu/parameters/ppfeaturemask")
+	if s == "" {
+		return nil
+	}
+	s = strings.TrimPrefix(s, "0x")
+	s = strings.TrimPrefix(s, "0X")
+	val, err := strconv.ParseUint(s, 16, 32)
+	if err != nil {
+		return nil
+	}
+	mask := uint32(val)
+	var out []string
+	for _, b := range ppFeatureMaskBits {
+		if mask&b.bit != 0 {
+			out = append(out, b.name)
+		}
+	}
+	return out
+}
+
 func readVRAMType(card int) string {
 	return sysfsRead(filepath.Join(renderDevPath(card), "mem_info_vram_type"))
 }

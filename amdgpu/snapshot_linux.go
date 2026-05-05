@@ -238,7 +238,7 @@ func ReadDeviceSnapshot(dev *Device, card int, state *PollState, gs *GRBMSample,
 	grbm := make(map[string]SensorValue)
 	grbm2 := make(map[string]SensorValue)
 	if !noPC && gs != nil && gs.Samples > 0 {
-		for _, e := range GRBMBits() {
+		for _, e := range GRBMBitsForGen(state.Gen) {
 			grbm[e.Name] = SensorValue{"%", float64(gs.GRBMCounts[e.Bit]) / float64(gs.Samples) * 100}
 		}
 		for _, e := range state.GRBM2Bits {

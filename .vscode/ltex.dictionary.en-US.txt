@@ -36,6 +36,7 @@ FCLKM
 fdinfo
 fnmatch
 freqs
+GDDR
 gfxclk
 gfxunknown
 gitignored
@@ -62,6 +63,7 @@ libc
 libdrm
 linux
 linux-primary
+LPDDR
 MCLK
 MMIO
 mpipu
@@ -108,3 +110,10 @@ VMEM
 vpeclk
 XDNA
 zig
+
+GFX%
+atopFrame
+APUs
+VCN
+staticcheck
+uapi
