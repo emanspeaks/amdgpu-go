@@ -35,6 +35,7 @@ type DeviceSnapshot struct {
 	Fdinfo      map[string]interface{} `json:"fdinfo"`
 	TotalFdinfo interface{}            `json:"Total fdinfo"`
 	NPUMetrics  map[string]interface{} `json:"npu_metrics"`
+	XdnaFdinfo  map[string]interface{} `json:"xdna_fdinfo,omitempty"`
 }
 
 // Frame is the top-level amdgpu_top-compatible JSON structure.

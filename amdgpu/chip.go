@@ -85,6 +85,17 @@ func HWEnginesForGen(gen Generation) map[string]bool {
 	return engines
 }
 
+// FLOPsPerCUPerMHz returns the peak FP32 FLOP count per compute unit per MHz.
+// GFX11+ (RDNA3) doubles throughput via dual-issue; earlier generations use 128.
+func FLOPsPerCUPerMHz(gen Generation) int {
+	switch gen {
+	case GenGFX11, GenGFX12:
+		return 256
+	default:
+		return 128
+	}
+}
+
 // DetectGeneration maps an AMDGPU family ID to a shader generation.
 func DetectGeneration(family uint32) Generation {
 	switch family {

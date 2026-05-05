@@ -2,11 +2,14 @@
 
 package amdgpu
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // buildDeviceInfoMap constructs the Info map for a GPU device from all available
 // sources: DRM ioctl results, sysfs, and derived values.
-func buildDeviceInfoMap(card int, di *DeviceInfo, mi *MemoryInfo, pciDev, drmVersion string) map[string]interface{} {
+func buildDeviceInfoMap(card int, di *DeviceInfo, mi *MemoryInfo, state *PollState) map[string]interface{} {
 	meta := ChipMetaForFamily(di.Family)
 
 	gpuType := "Discrete"
@@ -19,30 +22,39 @@ func buildDeviceInfoMap(card int, di *DeviceInfo, mi *MemoryInfo, pciDev, drmVer
 	vramVendor := readVRAMVendor(card)
 
 	var drmMajor, drmMinor, drmPatch int
-	fmt.Sscanf(drmVersion, "%d.%d.%d", &drmMajor, &drmMinor, &drmPatch)
+	fmt.Sscanf(state.DRMVer, "%d.%d.%d", &drmMajor, &drmMinor, &drmPatch)
 
 	deviceName := di.MarketingName
 	if deviceName == "" {
 		deviceName = ReadGPUName(card)
 	}
 
+	// ASIC Name first part is the gfx target version uppercased (e.g. "GFX1151"),
+	// matching amdgpu_top's get_asic_name() output. ChipClass uses the enum form
+	// with underscores (e.g. "GFX11_5") and is emitted separately.
+	asicNameFirst := strings.ToUpper(meta.GFXTarget) // "gfx1151" → "GFX1151"
+
+	base := renderDevPath(card)
+	sclkMin, _ := readMinMaxClockMHz(base + "/pp_dpm_sclk")
+	mclkMin, _ := readMinMaxClockMHz(base + "/pp_dpm_mclk")
+
 	m := map[string]interface{}{
 		"DeviceName":         deviceName,
-		"ASIC Name":          meta.ChipClass + "/" + meta.Name,
+		"ASIC Name":          asicNameFirst + "/" + meta.Name,
 		"Chip Class":         meta.ChipClass,
 		"DeviceID":           int(devID),
 		"RevisionID":         int(di.ExternalRev),
-		"PCI":                pciDev,
+		"PCI":                state.PCIDev,
 		"GPU Family":         meta.GPUFamily,
 		"GPU Type":           gpuType,
 		"gfx_target_version": meta.GFXTarget,
 		"GPU Clock": map[string]interface{}{
 			"max": int(di.MaxEngineClock / 1000), // kHz → MHz
-			"min": 0,
+			"min": int(sclkMin),
 		},
 		"Memory Clock": map[string]interface{}{
 			"max": int(di.MaxMemoryClock / 1000),
-			"min": 0,
+			"min": int(mclkMin),
 		},
 		"VRAM Size":       int64(mi.VRAMTotalHeapSize),
 		"VRAM Usage Size": int64(mi.VRAMHeapUsage),
@@ -58,6 +70,7 @@ func buildDeviceInfoMap(card int, di *DeviceInfo, mi *MemoryInfo, pciDev, drmVer
 	}
 
 	// Shader topology — emit both new structured names and amdgpu_top compat names.
+	var totalCU uint32
 	if di.NumShaderEngines > 0 {
 		m["NumShaderEngines"] = int(di.NumShaderEngines)
 		m["Shader Engine"] = int(di.NumShaderEngines)
@@ -68,16 +81,37 @@ func buildDeviceInfoMap(card int, di *DeviceInfo, mi *MemoryInfo, pciDev, drmVer
 			"max": int(di.NumCUPerSH),
 			"min": int(di.NumCUPerSH),
 		}
-		totalCU := di.NumShaderEngines * di.NumShaderArraysPerEngine * di.NumCUPerSH
+		totalCU = di.NumShaderEngines * di.NumShaderArraysPerEngine * di.NumCUPerSH
 		if totalCU > 0 {
 			m["num_cu"] = int(totalCU)
 			m["Total Compute Unit"] = int(totalCU)
+			m["Compute Unit"] = int(totalCU) // frontend reads this key for CU display
 		}
 	}
 
-	if meta.NPUName != "" {
-		m["NPU Name"] = meta.NPUName
-		m["NPU"] = meta.NPUName
+	// Peak FP32: numCU × FLOPsPerCUPerMHz × MaxEngineClockMHz / 1000 = GFLOPS
+	if totalCU > 0 && di.MaxEngineClock > 0 {
+		maxClkMHz := float64(di.MaxEngineClock) / 1000
+		peakGFLOPS := float64(totalCU) * float64(FLOPsPerCUPerMHz(state.Gen)) * maxClkMHz / 1000
+		m["Peak FP32"] = map[string]interface{}{"unit": "GFLOPS", "value": peakGFLOPS}
+	}
+
+	// NPU: prefer the XDNA driver's vbnv string (e.g. "RyzenAI-npu5") over the
+	// hardcoded chip lookup table name.
+	npuName := meta.NPUName
+	if state.Xdna.AccelDev != "" {
+		if vbnv := readXDNADeviceName(state.Xdna.AccelDev); vbnv != "" {
+			npuName = vbnv
+		}
+	}
+	if npuName != "" {
+		m["NPU Name"] = npuName
+		m["NPU"] = npuName
+	}
+
+	// ROCm version.
+	if rocm := ReadROCmVersion(); rocm != "" {
+		m["ROCm Version"] = rocm
 	}
 
 	// Cache sizes — kernel reports GL0/GL1/GL2 in KiB; convert to bytes.
@@ -106,5 +140,14 @@ func buildDeviceInfoMap(card int, di *DeviceInfo, mi *MemoryInfo, pciDev, drmVer
 	if vramVendor != "" {
 		m["VRAM Vendor"] = vramVendor
 	}
+
+	// Static hardware lists cached at init.
+	if len(state.FirmwareInfo) > 0 {
+		m["Firmware info"] = state.FirmwareInfo
+	}
+	if len(state.HWIPList) > 0 {
+		m["Hardware IP info"] = state.HWIPList
+	}
+
 	return m
 }

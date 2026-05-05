@@ -58,11 +58,12 @@ type FirmwareVersion struct {
 
 // HWIPInfo contains hardware IP block information.
 type HWIPInfo struct {
-	Type     HW_IP_TYPE
-	Instance uint32
-	Major    uint32
-	Minor    uint32
-	Enabled  bool
-	RevMajor uint32
-	RevMinor uint32
+	Type           HW_IP_TYPE
+	Instance       uint32
+	Major          uint32
+	Minor          uint32
+	Enabled        bool
+	AvailableRings uint32 // bitmask; popcount = number of queues
+	RevMajor       uint32
+	RevMinor       uint32
 }
