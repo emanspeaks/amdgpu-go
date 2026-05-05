@@ -26,6 +26,8 @@ type PollState struct {
 	Xdna         XdnaState
 	FirmwareInfo []map[string]interface{} // cached at init; static
 	HWIPList     []map[string]interface{} // cached at init; static
+	VBIOSData    *VBIOSInfo               // cached at init; static
+	VideoCaps    map[string]interface{}   // cached at init; static
 }
 
 // InitPollState initializes a PollState for the given device and card index.
@@ -50,6 +52,8 @@ func InitPollState(dev *Device, card int) *PollState {
 	state.Xdna = InitXdnaState()
 	state.FirmwareInfo = queryFirmwareInfo(dev)
 	state.HWIPList = queryHWIPList(dev)
+	state.VBIOSData, _ = dev.VBIOSInfo()
+	state.VideoCaps = queryVideoCaps(dev)
 	return state
 }
 
@@ -84,6 +88,7 @@ func queryFirmwareInfo(dev *Device) []map[string]interface{} {
 }
 
 // queryHWIPList queries all hardware IP block types and returns the list.
+// Uses HWIPCount to get the number of instances, matching amdgpu_top output.
 func queryHWIPList(dev *Device) []map[string]interface{} {
 	types := []HW_IP_TYPE{
 		HW_IP_TYPE_GFX, HW_IP_TYPE_COMPUTE, HW_IP_TYPE_DMA,
@@ -93,18 +98,58 @@ func queryHWIPList(dev *Device) []map[string]interface{} {
 	}
 	var out []map[string]interface{}
 	for _, t := range types {
+		count := dev.HWIPCount(t)
+		if count == 0 {
+			continue
+		}
 		info, err := dev.HWIPInfo(t)
-		if err != nil || !info.Enabled {
+		if err != nil {
 			continue
 		}
 		queues := bits.OnesCount32(info.AvailableRings)
 		out = append(out, map[string]interface{}{
 			"ip_type":  HWIPTypeName(t),
-			"ip_count": 1,
+			"ip_count": int(count),
 			"major":    info.Major,
 			"minor":    info.Minor,
 			"queues":   queues,
 		})
+	}
+	return out
+}
+
+var videoCodecNames = [8]string{
+	"MPEG2", "MPEG4", "VC1", "MPEG4_AVC", "HEVC", "JPEG", "VP9", "AV1",
+}
+
+// queryVideoCaps fetches decode and encode video capability dimensions.
+func queryVideoCaps(dev *Device) map[string]interface{} {
+	dec, errD := dev.VideoCaps(0)
+	enc, errE := dev.VideoCaps(1)
+	if errD != nil && errE != nil {
+		return nil
+	}
+	out := make(map[string]interface{})
+	for i, name := range videoCodecNames {
+		var decEntry, encEntry interface{}
+		if errD == nil {
+			e := dec.Decode[i]
+			if e.MaxWidth > 0 || e.MaxHeight > 0 {
+				decEntry = map[string]interface{}{"width": e.MaxWidth, "height": e.MaxHeight}
+			}
+		}
+		if errE == nil {
+			e := enc.Encode[i]
+			if e.MaxWidth > 0 || e.MaxHeight > 0 {
+				encEntry = map[string]interface{}{"width": e.MaxWidth, "height": e.MaxHeight}
+			}
+		}
+		if decEntry != nil || encEntry != nil {
+			out[name] = map[string]interface{}{"Decode": decEntry, "Encode": encEntry}
+		}
+	}
+	if len(out) == 0 {
+		return nil
 	}
 	return out
 }

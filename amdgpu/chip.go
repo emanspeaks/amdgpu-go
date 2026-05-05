@@ -85,6 +85,12 @@ func HWEnginesForGen(gen Generation) map[string]bool {
 	return engines
 }
 
+// RBPlusForGen returns true for generations that use RB+ (8 ROPs per RB pipe)
+// rather than the older RB (4 ROPs per RB pipe). GFX9 and later all use RB+.
+func RBPlusForGen(gen Generation) bool {
+	return gen >= GenGFX9
+}
+
 // FLOPsPerCUPerMHz returns the peak FP32 FLOP count per compute unit per MHz.
 // GFX11+ (RDNA3) doubles throughput via dual-issue; earlier generations use 128.
 func FLOPsPerCUPerMHz(gen Generation) int {
