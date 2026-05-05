@@ -315,13 +315,15 @@ func (d *Device) HWIPInfo(ipType HW_IP_TYPE) (*HWIPInfo, error) {
 	}
 
 	ipDisc := uint32(info.ip_discovery_version)
+	rings := uint32(info.available_rings)
 	return &HWIPInfo{
-		Type:     ipType,
-		Instance: 0,
-		Major:    uint32(info.hw_ip_version_major),
-		Minor:    uint32(info.hw_ip_version_minor),
-		Enabled:  uint32(info.available_rings) != 0,
-		RevMajor: (ipDisc >> 16) & 0xFF,
-		RevMinor: (ipDisc >> 8) & 0xFF,
+		Type:           ipType,
+		Instance:       0,
+		Major:          uint32(info.hw_ip_version_major),
+		Minor:          uint32(info.hw_ip_version_minor),
+		Enabled:        rings != 0,
+		AvailableRings: rings,
+		RevMajor:       (ipDisc >> 16) & 0xFF,
+		RevMinor:       (ipDisc >> 8) & 0xFF,
 	}, nil
 }

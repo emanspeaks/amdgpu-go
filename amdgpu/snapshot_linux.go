@@ -4,6 +4,7 @@ package amdgpu
 
 import (
 	"fmt"
+	"math/bits"
 	"time"
 )
 
@@ -16,18 +17,15 @@ type FdinfoState struct {
 
 // PollState holds per-device state that persists across poll cycles.
 type PollState struct {
-	Gen         Generation
-	GRBM2Bits   []GRBMBit
-	PCIDev      string
-	Fdinfo      FdinfoState
-	DevInfo     *DeviceInfo // cached; static per device
-	DRMVer      string
-	LastFCLKMHz float64 // last stable FCLK from pp_dpm_fclk
-
-	// CPU Tctl is cached per-state to avoid hammering hwmon every sample.
-	cpuTctl    float64
-	hasCPUTctl bool
-	cpuTctlAt  time.Time
+	Gen          Generation
+	GRBM2Bits    []GRBMBit
+	PCIDev       string
+	Fdinfo       FdinfoState
+	DevInfo      *DeviceInfo // cached; static per device
+	DRMVer       string
+	Xdna         XdnaState
+	FirmwareInfo []map[string]interface{} // cached at init; static
+	HWIPList     []map[string]interface{} // cached at init; static
 }
 
 // InitPollState initializes a PollState for the given device and card index.
@@ -49,7 +47,66 @@ func InitPollState(dev *Device, card int) *PollState {
 	if dv, err := dev.DRMVersion(); err == nil {
 		state.DRMVer = dv.Version
 	}
+	state.Xdna = InitXdnaState()
+	state.FirmwareInfo = queryFirmwareInfo(dev)
+	state.HWIPList = queryHWIPList(dev)
 	return state
+}
+
+// queryFirmwareInfo iterates all known FW types and builds the Firmware info list.
+func queryFirmwareInfo(dev *Device) []map[string]interface{} {
+	types := []AMDGPU_INFO_FW{
+		AMDGPU_INFO_FW_VCE, AMDGPU_INFO_FW_UVD, AMDGPU_INFO_FW_GMC,
+		AMDGPU_INFO_FW_GFX_ME, AMDGPU_INFO_FW_GFX_PFP, AMDGPU_INFO_FW_GFX_CE,
+		AMDGPU_INFO_FW_GFX_RLC, AMDGPU_INFO_FW_GFX_MEC,
+		AMDGPU_INFO_FW_SMC, AMDGPU_INFO_FW_SDMA, AMDGPU_INFO_FW_SOS,
+		AMDGPU_INFO_FW_ASD, AMDGPU_INFO_FW_VCN,
+		AMDGPU_INFO_FW_DMCU, AMDGPU_INFO_FW_TA, AMDGPU_INFO_FW_DMCUB,
+		AMDGPU_INFO_FW_TOC, AMDGPU_INFO_FW_CAP,
+		AMDGPU_INFO_FW_GFX_RLCP, AMDGPU_INFO_FW_GFX_RLCV,
+		AMDGPU_INFO_FW_MES_KIQ, AMDGPU_INFO_FW_MES, AMDGPU_INFO_FW_IMU, AMDGPU_INFO_FW_VPE,
+	}
+	var out []map[string]interface{}
+	for _, fw := range types {
+		info, err := dev.FirmwareVersion(fw)
+		if err != nil || info.Version == 0 {
+			continue
+		}
+		out = append(out, map[string]interface{}{
+			"fw_type":     FWTypeName(fw),
+			"index":       0,
+			"ip_instance": 0,
+			"version":     info.Version,
+			"feature":     info.Feature,
+		})
+	}
+	return out
+}
+
+// queryHWIPList queries all hardware IP block types and returns the list.
+func queryHWIPList(dev *Device) []map[string]interface{} {
+	types := []HW_IP_TYPE{
+		HW_IP_TYPE_GFX, HW_IP_TYPE_COMPUTE, HW_IP_TYPE_DMA,
+		HW_IP_TYPE_UVD, HW_IP_TYPE_VCE, HW_IP_TYPE_UVD_ENC,
+		HW_IP_TYPE_VCN_DEC, HW_IP_TYPE_VCN_ENC, HW_IP_TYPE_VCN_JPEG,
+		HW_IP_TYPE_VPE,
+	}
+	var out []map[string]interface{}
+	for _, t := range types {
+		info, err := dev.HWIPInfo(t)
+		if err != nil || !info.Enabled {
+			continue
+		}
+		queues := bits.OnesCount32(info.AvailableRings)
+		out = append(out, map[string]interface{}{
+			"ip_type":  HWIPTypeName(t),
+			"ip_count": 1,
+			"major":    info.Major,
+			"minor":    info.Minor,
+			"queues":   queues,
+		})
+	}
+	return out
 }
 
 // SampleGRBMMulti samples GRBM and GRBM2 registers across all devices over the
@@ -97,22 +154,10 @@ func ReadDeviceSnapshot(dev *Device, card int, state *PollState, gs *GRBMSample,
 	}
 	const mib = 1 << 20
 
-	// Refresh CPU Tctl every ~5 seconds to avoid hammering hwmon.
-	if time.Since(state.cpuTctlAt) > 5*time.Second {
-		state.cpuTctl, state.hasCPUTctl = ReadCPUTctl()
-		state.cpuTctlAt = time.Now()
-	}
+	cpuTctl, hasCPUTctl := ReadCPUTctl()
 
-	// Sensors. FCLK persistence: update stored value when pp_dpm_fclk has an
-	// active marker; use the stored value when the marker is absent (DPM transition).
-	sensors, fclkFromDPM := readSensors(card, state.cpuTctl, state.hasCPUTctl)
-	if fclkFromDPM > 0 {
-		state.LastFCLKMHz = fclkFromDPM
-	} else if state.LastFCLKMHz > 0 {
-		sensors["FCLK"] = SensorValue{"MHz", state.LastFCLKMHz}
-	} else {
-		delete(sensors, "FCLK")
-	}
+	// FCLK is only emitted when pp_dpm_fclk has an active * marker; absent otherwise.
+	sensors, _ := readSensors(card, cpuTctl, hasCPUTctl)
 
 	gm := ParseGPUMetrics(card)
 
@@ -159,7 +204,7 @@ func ReadDeviceSnapshot(dev *Device, card int, state *PollState, gs *GRBMSample,
 	// Device Info map.
 	var infoMap map[string]interface{}
 	if di := state.DevInfo; di != nil {
-		infoMap = buildDeviceInfoMap(card, di, mem, state.PCIDev, state.DRMVer)
+		infoMap = buildDeviceInfoMap(card, di, mem, state)
 	} else {
 		name := ReadGPUName(card)
 		infoMap = map[string]interface{}{"DeviceName": name, "ASIC Name": name}
@@ -179,6 +224,21 @@ func ReadDeviceSnapshot(dev *Device, card int, state *PollState, gs *GRBMSample,
 	fdinfo, totalFdinfo := ComputeFdinfoDeltas(state.Fdinfo.Prev, currFdinfo, dt, seenEngines)
 	state.Fdinfo.Prev = currFdinfo
 	state.Fdinfo.PrevTime = now
+
+	// XDNA (NPU) per-process fdinfo — only when a device was found at init.
+	var xdnaFdinfo map[string]interface{}
+	if state.Xdna.AccelDev != "" {
+		currXdna := ScanXdnaFdinfo()
+		var xdnaDt float64
+		if !state.Xdna.PrevTime.IsZero() {
+			xdnaDt = now.Sub(state.Xdna.PrevTime).Seconds()
+		}
+		if len(currXdna) > 0 {
+			xdnaFdinfo = ComputeXdnaDeltas(state.Xdna.Prev, currXdna, xdnaDt)
+		}
+		state.Xdna.Prev = currXdna
+		state.Xdna.PrevTime = now
+	}
 
 	return &DeviceSnapshot{
 		Info: infoMap,
@@ -200,5 +260,6 @@ func ReadDeviceSnapshot(dev *Device, card int, state *PollState, gs *GRBMSample,
 		Fdinfo:      fdinfo,
 		TotalFdinfo: totalFdinfo,
 		NPUMetrics:  buildNPUMetrics(gm),
+		XdnaFdinfo:  xdnaFdinfo,
 	}, nil
 }

@@ -115,6 +115,61 @@ func ReadCPUTctl() (float64, bool) {
 	return 0, false
 }
 
+// readMinMaxClockMHz parses a pp_dpm_* sysfs file and returns the minimum and
+// maximum clock frequencies in MHz across all listed DPM states.
+func readMinMaxClockMHz(path string) (minMHz, maxMHz float64) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, 0
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		for _, field := range strings.Fields(line) {
+			lower := strings.ToLower(field)
+			if strings.HasSuffix(lower, "mhz") {
+				if val, err := strconv.ParseFloat(strings.TrimSuffix(lower, "mhz"), 64); err == nil {
+					if minMHz == 0 || val < minMHz {
+						minMHz = val
+					}
+					if val > maxMHz {
+						maxMHz = val
+					}
+				}
+			}
+		}
+	}
+	return minMHz, maxMHz
+}
+
+// ReadROCmVersion reads the ROCm runtime version from /opt/rocm/.info/version
+// (or $ROCM_PATH/.info/version). Returns "" if not found.
+func ReadROCmVersion() string {
+	base := os.Getenv("ROCM_PATH")
+	if base == "" {
+		base = "/opt/rocm"
+	}
+	s := sysfsRead(filepath.Join(base, ".info", "version"))
+	if s == "" {
+		return ""
+	}
+	// Strip build suffix (e.g. "7.2.2-build123" → "7.2.2").
+	if idx := strings.IndexByte(s, '-'); idx >= 0 {
+		s = s[:idx]
+	}
+	return s
+}
+
+// readXDNADeviceName reads the vbnv device name for an XDNA accel device
+// (e.g. "/dev/accel/accel0") from its sysfs node. Returns "" on failure.
+func readXDNADeviceName(accelDev string) string {
+	base := filepath.Base(accelDev) // "accel0"
+	idxStr := strings.TrimPrefix(base, "accel")
+	idx, err := strconv.Atoi(idxStr)
+	if err != nil {
+		return ""
+	}
+	return sysfsRead(fmt.Sprintf("/sys/dev/char/261:%d/device/vbnv", idx))
+}
+
 // readCurrentClockMHz parses a pp_dpm_* sysfs file and returns the active
 // clock frequency in MHz (the line marked with " *"). Returns 0 if not found.
 func readCurrentClockMHz(path string) float64 {
