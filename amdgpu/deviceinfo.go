@@ -18,6 +18,31 @@ type DeviceInfo struct {
 	GL1CacheSize uint32 // L1 cache per shader array (gl1c_cache_size), bytes
 	GL2CacheSize uint32 // L2 cache (gl2c_cache_size), bytes
 	MallSize     uint64 // L3 infinity cache (mall_size), bytes
+	// Memory subsystem
+	VRAMType     uint32 // AMDGPU_VRAM_TYPE_* (e.g. 12=LPDDR5, 9=GDDR6, 6=HBM)
+	VRAMBitWidth uint32 // memory bus width in bits (e.g. 256)
+	// Render backends
+	NumRBPipes uint32 // number of render backend pipes (rb_pipes)
+}
+
+// VBIOSInfo contains VBIOS identification strings from AMDGPU_INFO_VBIOS_* ioctls.
+type VBIOSInfo struct {
+	Name   string // e.g. "AMD STRIX_HALO_GENERIC"
+	PN     string // part number, e.g. "113-STRXLGEN-001"
+	VerStr string // version string, e.g. "023.011.000.039.000001"
+	Date   string // build date, e.g. "2024/06/17 02:08"
+}
+
+// VideoCapEntry holds the max encode/decode dimensions for one codec.
+type VideoCapEntry struct {
+	MaxWidth  uint32
+	MaxHeight uint32
+}
+
+// VideoCapsInfo holds per-codec decode and encode capability dimensions.
+type VideoCapsInfo struct {
+	Decode [8]VideoCapEntry // indexed by AMDGPU_INFO_VIDEO_CAPS_CODEC_IDX_*
+	Encode [8]VideoCapEntry
 }
 
 // MemoryInfo contains VRAM/GTT heap information from AMDGPU_INFO_MEMORY.

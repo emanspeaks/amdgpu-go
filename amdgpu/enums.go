@@ -172,6 +172,30 @@ var fwTypeNames = map[AMDGPU_INFO_FW]string{
 	AMDGPU_INFO_FW_VPE:      "VPE",
 }
 
+// vramTypeNames maps the kernel AMDGPU_VRAM_TYPE_* uint to a display string.
+var vramTypeNames = map[uint32]string{
+	1:  "GDDR1",
+	2:  "DDR2",
+	3:  "GDDR3",
+	4:  "GDDR4",
+	5:  "GDDR5",
+	6:  "HBM",
+	7:  "DDR3",
+	8:  "DDR4",
+	9:  "GDDR6",
+	10: "DDR5",
+	11: "LPDDR4",
+	12: "LPDDR5",
+}
+
+// VRAMTypeName returns the display string for the kernel vram_type enum value.
+func VRAMTypeName(t uint32) string {
+	if s, ok := vramTypeNames[t]; ok {
+		return s
+	}
+	return ""
+}
+
 // FWTypeName returns the display name for a firmware type (e.g. "GFX_ME").
 func FWTypeName(fw AMDGPU_INFO_FW) string {
 	if n, ok := fwTypeNames[fw]; ok {

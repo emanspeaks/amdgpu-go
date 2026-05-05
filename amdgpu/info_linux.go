@@ -134,11 +134,55 @@ func buildDeviceInfoMap(card int, di *DeviceInfo, mi *MemoryInfo, state *PollSta
 		m["L3 Cache Size"] = int64(di.MallSize)
 		m["L3 Cache"] = int64(di.MallSize)
 	}
+	// VRAM type: sysfs first, fall back to ioctl enum (sysfs is empty on some APUs).
+	if vramType == "" {
+		vramType = VRAMTypeName(di.VRAMType)
+	}
 	if vramType != "" {
 		m["VRAM Type"] = vramType
 	}
 	if vramVendor != "" {
 		m["VRAM Vendor"] = vramVendor
+	}
+	if di.VRAMBitWidth > 0 {
+		m["VRAM Bit width"] = int(di.VRAMBitWidth)
+	}
+
+	// Render backends and derived metrics.
+	if di.NumRBPipes > 0 {
+		ropsPerRB := 4
+		rbType := "RB"
+		if RBPlusForGen(state.Gen) {
+			ropsPerRB = 8
+			rbType = "RB Plus"
+		}
+		totalROP := int(di.NumRBPipes) * ropsPerRB
+		m["RenderBackend"] = int(di.NumRBPipes)
+		m["RenderBackend Type"] = rbType
+		m["Total ROP"] = totalROP
+
+		if di.MaxEngineClock > 0 {
+			maxClkGHz := float64(di.MaxEngineClock) / 1e6 // kHz → GHz
+			m["Peak Pixel Fill-Rate"] = map[string]interface{}{
+				"unit":  "GP/s",
+				"value": float64(totalROP) * maxClkGHz,
+			}
+		}
+	}
+
+	// Peak memory bandwidth: MaxMemClkMHz × VRAMBitWidth × 2 (DDR) / 8 / 1000.
+	// For LPDDR5 the kernel reports half the effective clock; multiply by 8 not 2
+	// to match amdgpu_top's output. We detect this via vram_type == 12 (LPDDR5).
+	if di.VRAMBitWidth > 0 && di.MaxMemoryClock > 0 {
+		maxMemMHz := float64(di.MaxMemoryClock) / 1000 // kHz → MHz
+		var factor float64
+		if di.VRAMType == 12 { // LPDDR5
+			factor = 8
+		} else {
+			factor = 2
+		}
+		bwGBs := maxMemMHz * float64(di.VRAMBitWidth) * factor / 8 / 1000
+		m["Peak Memory Bandwidth"] = map[string]interface{}{"unit": "GB/s", "value": bwGBs}
 	}
 
 	// Static hardware lists cached at init.
@@ -147,6 +191,17 @@ func buildDeviceInfoMap(card int, di *DeviceInfo, mi *MemoryInfo, state *PollSta
 	}
 	if len(state.HWIPList) > 0 {
 		m["Hardware IP info"] = state.HWIPList
+	}
+	if state.VBIOSData != nil {
+		m["VBIOS"] = map[string]interface{}{
+			"name":    state.VBIOSData.Name,
+			"pn":      state.VBIOSData.PN,
+			"ver_str": state.VBIOSData.VerStr,
+			"date":    state.VBIOSData.Date,
+		}
+	}
+	if state.VideoCaps != nil {
+		m["Video Caps"] = state.VideoCaps
 	}
 
 	return m

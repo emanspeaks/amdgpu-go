@@ -82,6 +82,40 @@ static inline int query_hw_ip_wrapper(int fd, uint32_t type, uint32_t ip_instanc
 static inline const char* get_marketing_name_wrapper(amdgpu_device_handle handle) {
 	return amdgpu_get_marketing_name(handle);
 }
+
+static inline int query_hw_ip_count_wrapper(int fd, uint32_t type, uint32_t *count) {
+	struct drm_amdgpu_info request;
+	memset(&request, 0, sizeof(request));
+	request.query = AMDGPU_INFO_HW_IP_COUNT;
+	request.return_pointer = (uintptr_t)count;
+	request.return_size = sizeof(*count);
+	request.query_hw_ip.type = type;
+	return drmCommandWriteRead(fd, DRM_AMDGPU_INFO, &request,
+				   sizeof(struct drm_amdgpu_info));
+}
+
+static inline int query_vbios_str_wrapper(int fd, uint32_t type, char *buf, uint32_t bufsize) {
+	struct drm_amdgpu_info request;
+	memset(&request, 0, sizeof(request));
+	request.query = AMDGPU_INFO_VBIOS;
+	request.return_pointer = (uintptr_t)buf;
+	request.return_size = bufsize;
+	request.vbios_info.type = type;
+	return drmCommandWriteRead(fd, DRM_AMDGPU_INFO, &request,
+				   sizeof(struct drm_amdgpu_info));
+}
+
+static inline int query_video_caps_wrapper(int fd, uint32_t type,
+                                            void *return_pointer, uint32_t return_size) {
+	struct drm_amdgpu_info request;
+	memset(&request, 0, sizeof(request));
+	request.query = AMDGPU_INFO_VIDEO_CAPS;
+	request.return_pointer = (uintptr_t)return_pointer;
+	request.return_size = return_size;
+	request.sensor_info.type = type; // overlaps video_cap.type
+	return drmCommandWriteRead(fd, DRM_AMDGPU_INFO, &request,
+				   sizeof(struct drm_amdgpu_info));
+}
 */
 import "C"
 
@@ -180,6 +214,9 @@ func (d *Device) DeviceInfo() (*DeviceInfo, error) {
 		GL1CacheSize:             uint32(info.gl1c_cache_size),
 		GL2CacheSize:             uint32(info.gl2c_cache_size),
 		MallSize:                 uint64(info.mall_size),
+		VRAMType:                 uint32(info.vram_type),
+		VRAMBitWidth:             uint32(info.vram_bit_width),
+		NumRBPipes:               uint32(info.num_rb_pipes),
 	}, nil
 }
 
@@ -326,4 +363,71 @@ func (d *Device) HWIPInfo(ipType HW_IP_TYPE) (*HWIPInfo, error) {
 		RevMajor:       (ipDisc >> 16) & 0xFF,
 		RevMinor:       (ipDisc >> 8) & 0xFF,
 	}, nil
+}
+
+// HWIPCount returns the number of instances of the given hardware IP type.
+func (d *Device) HWIPCount(ipType HW_IP_TYPE) uint32 {
+	var count C.uint32_t
+	if ret := C.query_hw_ip_count_wrapper(C.int(d.fd), C.uint32_t(ipType), &count); ret < 0 {
+		return 0
+	}
+	return uint32(count)
+}
+
+// VBIOSInfo returns VBIOS identification strings via AMDGPU_INFO_VBIOS_* ioctls.
+func (d *Device) VBIOSInfo() (*VBIOSInfo, error) {
+	query := func(t C.uint32_t) string {
+		var buf [128]C.char
+		ret := C.query_vbios_str_wrapper(C.int(d.fd), t, &buf[0], C.uint32_t(len(buf)))
+		if ret < 0 {
+			return ""
+		}
+		return C.GoString(&buf[0])
+	}
+	const (
+		vbiosName   C.uint32_t = 0x6
+		vbiosPn     C.uint32_t = 0x3
+		vbiosVerStr C.uint32_t = 0x4
+		vbiosDate   C.uint32_t = 0x5
+	)
+	name := query(vbiosName)
+	pn := query(vbiosPn)
+	if name == "" && pn == "" {
+		return nil, fmt.Errorf("VBIOS info not available")
+	}
+	return &VBIOSInfo{
+		Name:   name,
+		PN:     pn,
+		VerStr: query(vbiosVerStr),
+		Date:   query(vbiosDate),
+	}, nil
+}
+
+// VideoCaps returns video encode or decode capability dimensions per codec.
+// pass 0 for decode, 1 for encode (AMDGPU_INFO_VIDEO_CAPS_DECODE/ENCODE).
+func (d *Device) VideoCaps(capType uint32) (*VideoCapsInfo, error) {
+	// struct drm_amdgpu_info_video_caps: 8 entries of {max_width, max_height u32}
+	var raw [8 * 2]C.uint32_t
+	ret := C.query_video_caps_wrapper(
+		C.int(d.fd),
+		C.uint32_t(capType),
+		unsafe.Pointer(&raw[0]),
+		C.uint32_t(unsafe.Sizeof(raw)),
+	)
+	if ret < 0 {
+		return nil, fmt.Errorf("AMDGPU_INFO_VIDEO_CAPS: %w", mapErr(ret))
+	}
+	var out VideoCapsInfo
+	for i := 0; i < 8; i++ {
+		entry := VideoCapEntry{
+			MaxWidth:  uint32(raw[i*2]),
+			MaxHeight: uint32(raw[i*2+1]),
+		}
+		if capType == 0 {
+			out.Decode[i] = entry
+		} else {
+			out.Encode[i] = entry
+		}
+	}
+	return &out, nil
 }
