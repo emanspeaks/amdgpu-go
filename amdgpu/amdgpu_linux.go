@@ -374,40 +374,43 @@ func (d *Device) HWIPCount(ipType HW_IP_TYPE) uint32 {
 	return uint32(count)
 }
 
-// VBIOSInfo returns VBIOS identification strings via AMDGPU_INFO_VBIOS_* ioctls.
+// VBIOSInfo returns VBIOS identification strings via AMDGPU_INFO_VBIOS_INFO ioctl.
+// The kernel returns a drm_amdgpu_info_vbios struct:
+//   name[64] + vbios_pn[64] + version(4) + pad(4) + vbios_ver_str[32] + date[32] = 200 bytes
 func (d *Device) VBIOSInfo() (*VBIOSInfo, error) {
-	query := func(t C.uint32_t) string {
-		var buf [128]C.char
-		ret := C.query_vbios_str_wrapper(C.int(d.fd), t, &buf[0], C.uint32_t(len(buf)))
-		if ret < 0 {
-			return ""
-		}
-		return C.GoString(&buf[0])
+	const vbiosInfo C.uint32_t = 3 // AMDGPU_INFO_VBIOS_INFO
+	var buf [200]C.char
+	ret := C.query_vbios_str_wrapper(C.int(d.fd), vbiosInfo, &buf[0], C.uint32_t(len(buf)))
+	if ret < 0 {
+		return nil, fmt.Errorf("VBIOS info: %w", mapErr(ret))
 	}
-	const (
-		vbiosName   C.uint32_t = 0x6
-		vbiosPn     C.uint32_t = 0x3
-		vbiosVerStr C.uint32_t = 0x4
-		vbiosDate   C.uint32_t = 0x5
-	)
-	name := query(vbiosName)
-	pn := query(vbiosPn)
+	cstr := func(start, end int) string {
+		b := (*[1 << 20]byte)(unsafe.Pointer(&buf[0]))[start:end]
+		for i, c := range b {
+			if c == 0 {
+				return string(b[:i])
+			}
+		}
+		return string(b)
+	}
+	name := cstr(0, 64)
+	pn := cstr(64, 128)
 	if name == "" && pn == "" {
 		return nil, fmt.Errorf("VBIOS info not available")
 	}
 	return &VBIOSInfo{
 		Name:   name,
 		PN:     pn,
-		VerStr: query(vbiosVerStr),
-		Date:   query(vbiosDate),
+		VerStr: cstr(136, 168),
+		Date:   cstr(168, 200),
 	}, nil
 }
 
 // VideoCaps returns video encode or decode capability dimensions per codec.
 // pass 0 for decode, 1 for encode (AMDGPU_INFO_VIDEO_CAPS_DECODE/ENCODE).
+// drm_amdgpu_info_video_codec_info: valid(4)+max_width(4)+max_height(4)+pixels(4)+level(4)+pad(4) = 24 bytes each
 func (d *Device) VideoCaps(capType uint32) (*VideoCapsInfo, error) {
-	// struct drm_amdgpu_info_video_caps: 8 entries of {max_width, max_height u32}
-	var raw [8 * 2]C.uint32_t
+	var raw [8 * 6]C.uint32_t // 8 codecs × 6 uint32 fields each
 	ret := C.query_video_caps_wrapper(
 		C.int(d.fd),
 		C.uint32_t(capType),
@@ -419,9 +422,13 @@ func (d *Device) VideoCaps(capType uint32) (*VideoCapsInfo, error) {
 	}
 	var out VideoCapsInfo
 	for i := 0; i < 8; i++ {
+		base := i * 6
+		if raw[base] == 0 { // valid == 0: codec not supported
+			continue
+		}
 		entry := VideoCapEntry{
-			MaxWidth:  uint32(raw[i*2]),
-			MaxHeight: uint32(raw[i*2+1]),
+			MaxWidth:  uint32(raw[base+1]),
+			MaxHeight: uint32(raw[base+2]),
 		}
 		if capType == 0 {
 			out.Decode[i] = entry
