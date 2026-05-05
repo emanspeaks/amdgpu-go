@@ -112,7 +112,7 @@ static inline int query_video_caps_wrapper(int fd, uint32_t type,
 	request.query = AMDGPU_INFO_VIDEO_CAPS;
 	request.return_pointer = (uintptr_t)return_pointer;
 	request.return_size = return_size;
-	request.sensor_info.type = type; /* overlaps video_cap.type */
+	request.sensor_info.type = type; // overlaps video_cap.type
 	return drmCommandWriteRead(fd, DRM_AMDGPU_INFO, &request,
 				   sizeof(struct drm_amdgpu_info));
 }
@@ -216,7 +216,7 @@ func (d *Device) DeviceInfo() (*DeviceInfo, error) {
 		MallSize:                 uint64(info.mall_size),
 		VRAMType:                 uint32(info.vram_type),
 		VRAMBitWidth:             uint32(info.vram_bit_width),
-		NumRBPipes:               uint32(info.rb_pipes),
+		NumRBPipes:               uint32(info.num_rb_pipes),
 	}, nil
 }
 
